@@ -21,7 +21,12 @@ const ROBOTS = [
   { name: "Bolt Robot", color: "#F97316" },
   { name: "Cog Robot", color: "#22C55E" },
   { name: "Dot Robot", color: "#A855F7" },
+  { name: "Echo Robot", color: "#EC4899" },
+  { name: "Flux Robot", color: "#EAB308" },
 ];
+
+const COMMENTS = ["Completely agree with this", "Good call", "Can we pair on this?", "I'd like to discuss this further", "+1, same here", "Let's add this to the parking lot", "Nice work!"];
+const EMOJIS = ["👍", "❤️", "🎉", "😀", "👏", "💡"];
 
 const IDEAS: Record<string, string[]> = {
   positive: [
@@ -51,9 +56,24 @@ const IDEAS: Record<string, string[]> = {
 };
 
 const STANDUP: Record<string, string[]> = {
-  yesterday: ["Finished the login form validation", "Reviewed two pull requests", "Paired on the reporting bug", "Updated the API docs"],
-  today: ["Start on the export feature", "Write tests for the billing module", "Fix the flaky integration test", "Sync with design on the new dashboard"],
-  blockers: ["Waiting on access to the staging database", "No blockers", "Need a decision on the pricing copy", "No blockers today"],
+  yesterday: [
+    "Finished the login form validation",
+    "Reviewed two pull requests",
+    "Paired on the reporting bug and found the root cause",
+    "Updated the API docs for the new endpoints",
+    "Rolled the feature flag out to half of our accounts",
+    "Cleaned up warnings from the linter",
+    "Merged the payments refactor",
+  ],
+  today: [
+    "Start on the export feature",
+    "Write tests for the billing module",
+    "Fix the flaky integration test",
+    "Sync with design on the new dashboard",
+    "Draft the plan for offline support",
+    "Look into the slow upload endpoint",
+  ],
+  blockers: ["Waiting on access to the staging database", "Need a decision on the pricing copy", "Need a review on the migration PR"],
 };
 
 const ESTIMATION_ITEMS = [
@@ -64,6 +84,7 @@ const ESTIMATION_ITEMS = [
 ];
 
 const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
+const shuffled = <T,>(list: T[]) => [...list].sort(() => Math.random() - 0.5);
 
 async function robotUsers() {
   const existing = await db.select().from(schema.users).where(sql`${schema.users.options}->>'robot' = 'true'`);
@@ -97,6 +118,30 @@ export async function createDemoMeeting(user: CurrentUser, teamId: string, type:
     deckId: type === "estimation" ? "scrum" : null,
   });
   for (const r of await robotUsers()) await addParticipant(meeting, r.id, "participant");
+  if (type === "standup") {
+    const [ctxRow] = await db
+      .select({ team: schema.teams, org: schema.organizations })
+      .from(schema.teams)
+      .innerJoin(schema.organizations, eq(schema.organizations.id, schema.teams.orgId))
+      .where(eq(schema.teams.id, teamId))
+      .limit(1);
+    const { applyOp } = await import("./meetings/ops");
+    const robots = await db
+      .select({ p: schema.participants, u: schema.users })
+      .from(schema.participants)
+      .innerJoin(schema.users, eq(schema.users.id, schema.participants.userId))
+      .where(and(eq(schema.participants.meetingId, meeting.id), sql`${schema.users.options}->>'robot' = 'true'`));
+    // All but one robot have already posted, so the facilitator sees a lively feed straight away.
+    for (const r of robots.slice(0, -1)) {
+      const rctx = { meeting, team: ctxRow.team, org: ctxRow.org, participant: r.p, teamAccess: null, viewer: r.u };
+      for (const [i, t] of meeting.topics.entries()) {
+        const pool = i === 0 ? STANDUP.yesterday : i === 1 ? STANDUP.today : STANDUP.blockers;
+        const n = i >= 2 ? (Math.random() < 0.4 ? 1 : 0) : 1 + Math.floor(Math.random() * 2);
+        for (const text of shuffled(pool).slice(0, n)) await applyOp(rctx, { type: "standup.add", topicId: t.id, text }).catch(() => {});
+      }
+      await applyOp(rctx, { type: "step.finish", step: "standup" }).catch(() => {});
+    }
+  }
   if (type === "estimation") {
     let pos = 0;
     for (const it of ESTIMATION_ITEMS) {
@@ -205,19 +250,34 @@ export async function demoTick(ctx: MeetingContext) {
       break;
     }
     case "standup": {
-      const ups = await db.select({ pid: schema.standupUpdates.participantId, topicId: schema.standupUpdates.topicId }).from(schema.standupUpdates).where(eq(schema.standupUpdates.meetingId, m.id));
-      const r = robots.find((x) => m.topics.some((t) => !ups.some((u) => u.pid === x.p.id && u.topicId === t.id)));
+      const ups = await db.select({ id: schema.standupUpdates.id, pid: schema.standupUpdates.participantId, topicId: schema.standupUpdates.topicId }).from(schema.standupUpdates).where(eq(schema.standupUpdates.meetingId, m.id));
+      const r = robots.find((x) => !x.p.finishedSteps.includes("standup"));
       if (r) {
-        const topic = m.topics.find((t) => !ups.some((u) => u.pid === r.p.id && u.topicId === t.id))!;
-        const idx = m.topics.indexOf(topic);
-        await act({ ...r, u: r.u }, { type: "standup.add", topicId: topic.id, text: pick(idx === 0 ? STANDUP.yesterday : idx === 1 ? STANDUP.today : STANDUP.blockers) });
+        const topic = m.topics.find((t) => !ups.some((u) => u.pid === r.p.id && u.topicId === t.id));
+        if (topic) {
+          const idx = m.topics.indexOf(topic);
+          await act(r, { type: "standup.add", topicId: topic.id, text: pick(idx === 0 ? STANDUP.yesterday : idx === 1 ? STANDUP.today : STANDUP.blockers) });
+        } else await act(r, { type: "step.finish", step: "standup" });
+      }
+      // Robots react to and comment on updates, including yours.
+      if (ups.length && Math.random() < 0.5) {
+        const target = pick(ups);
+        const who = pick(robots.filter((x) => x.p.id !== target.pid));
+        if (who) {
+          if (Math.random() < 0.7) await act(who, { type: "reaction.toggle", targetId: target.id, emoji: pick(EMOJIS) });
+          else await act(who, { type: "comment.add", targetType: "update", targetId: target.id, text: pick(COMMENTS) });
+        }
       }
       break;
     }
     case "discuss": {
       const target = m.presenting?.targetId;
-      if (target && Math.random() < 0.25) {
-        await act(pick(robots), { type: "reaction.toggle", targetId: target, emoji: pick(["👍", "❤️", "🎉", "💡"]) });
+      if (target && Math.random() < 0.3) {
+        if (Math.random() < 0.7) await act(pick(robots), { type: "reaction.toggle", targetId: target, emoji: pick(EMOJIS) });
+        else {
+          const [group] = await db.select({ id: schema.ideaGroups.id }).from(schema.ideaGroups).where(eq(schema.ideaGroups.id, target)).limit(1);
+          await act(pick(robots), { type: "comment.add", targetType: group ? "group" : "idea", targetId: target, text: pick(COMMENTS) });
+        }
       }
       break;
     }
