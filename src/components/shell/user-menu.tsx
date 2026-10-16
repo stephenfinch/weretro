@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme";
 import { LogOut, Monitor, Moon, Sun, User, Bell, Plus, Check, Building2, HelpCircle } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,7 +39,7 @@ export function UserMenu({ user }: { user: { name: string; email: string | null;
           { key: "dark", label: "Dark", icon: Moon },
           { key: "system", label: "System", icon: Monitor },
         ].map((t) => (
-          <DropdownMenuItem key={t.key} onSelect={(e) => { e.preventDefault(); setTheme(t.key); }}>
+          <DropdownMenuItem key={t.key} onSelect={(e) => { e.preventDefault(); setTheme(t.key as "light" | "dark" | "system"); }}>
             <t.icon /> {t.label}
             {theme === t.key && <Check className="ml-auto" />}
           </DropdownMenuItem>
