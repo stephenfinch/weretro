@@ -30,7 +30,7 @@ export function HealthRadar({ health, layers = ["mean", "distribution"], size = 
     previous: health.previous[d.id] ?? null,
   }));
   if (axes.length < 3) return <p className="py-8 text-center text-sm text-muted-foreground">At least 3 dimensions are needed to draw the radar.</p>;
-  const pad = 90;
+  const pad = 120;
   const W = size + pad * 2;
   const c = W / 2;
   const R = size / 2 - 10;

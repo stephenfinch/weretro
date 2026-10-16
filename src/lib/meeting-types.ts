@@ -296,6 +296,8 @@ export type MeetingStateDTO = {
   health: HealthDTO | null;
   estimation: EstimationItemDTO[];
   standup: StandupUpdateDTO[];
+  standupCarryovers: { id: string; topicId: string; type: string | null; text: string; dayCount: number; date: string }[];
+  standupHiddenCount: number;
   liveEvents: LiveEventDTO[];
   checks: CheckDTO[];
   icebreakerEntries: IcebreakerEntryDTO[];

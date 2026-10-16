@@ -436,10 +436,31 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
 
   // ── Standup ─────────────────────────────────────────────────────────────
   let standup: StandupUpdateDTO[] = [];
+  let standupCarryovers: MeetingStateDTO["standupCarryovers"] = [];
+  let standupHiddenCount = 0;
   if (meeting.type === "standup") {
     const ups = await db.select().from(schema.standupUpdates).where(eq(schema.standupUpdates.meetingId, meeting.id)).orderBy(asc(schema.standupUpdates.position));
     const iFinished = !!myP?.finishedSteps.includes("standup");
     const showAll = closed || iFinished || me.isFacilitator || meeting.options.standupShowFeedBeforeFinish || myP?.role === "observer" || !myP;
+    standupHiddenCount = showAll ? 0 : new Set(ups.filter((u) => u.userId !== viewer.id).map((u) => u.userId)).size;
+    if (meeting.seriesId && myP) {
+      const [prevMeeting] = await db
+        .select({ id: schema.meetings.id, date: schema.meetings.date })
+        .from(schema.meetings)
+        .where(and(eq(schema.meetings.seriesId, meeting.seriesId), lt(schema.meetings.date, meeting.date), isNull(schema.meetings.deletedAt)))
+        .orderBy(desc(schema.meetings.date))
+        .limit(1);
+      if (prevMeeting) {
+        const prevUps = await db
+          .select()
+          .from(schema.standupUpdates)
+          .where(and(eq(schema.standupUpdates.meetingId, prevMeeting.id), eq(schema.standupUpdates.userId, viewer.id), inArray(schema.standupUpdates.type, ["doing", "blocked"])));
+        const carried = new Set(ups.filter((u) => u.carriedFromId).map((u) => u.carriedFromId));
+        standupCarryovers = prevUps
+          .filter((u) => !carried.has(u.id))
+          .map((u) => ({ id: u.id, topicId: u.topicId, type: u.type, text: u.text, dayCount: u.dayCount, date: prevMeeting.date }));
+      }
+    }
     standup = ups
       .filter((u) => showAll || u.userId === viewer.id)
       .map((u) => ({
@@ -566,6 +587,8 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
     health,
     estimation,
     standup,
+    standupCarryovers,
+    standupHiddenCount,
     liveEvents,
     checks,
     icebreakerEntries,
