@@ -511,12 +511,24 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
   const iceRows = meeting.icebreaker?.gameKey
     ? await db.select().from(schema.icebreakerEntries).where(eq(schema.icebreakerEntries.meetingId, meeting.id)).orderBy(asc(schema.icebreakerEntries.createdAt))
     : [];
+  // keep secret game data secret (imposter identity, two-truths lies)
+  let icebreaker = meeting.icebreaker ?? null;
+  if (icebreaker?.gameKey === "imposter" && icebreaker.phase !== "reveal" && icebreaker.data) {
+    const { imposter, word, ...rest } = icebreaker.data as Record<string, unknown>;
+    const amImposter = !!myP && imposter === myP.id;
+    icebreaker = { ...icebreaker, data: { ...rest, word: amImposter ? undefined : word, youAreImposter: amImposter } };
+  }
+  const ibData = (icebreaker?.data ?? {}) as Record<string, unknown>;
+  const revealedTarget = icebreaker?.gameKey === "twoTruths" && ibData.revealed ? (ibData.order as string[] | undefined)?.[Number(ibData.current ?? 0)] : null;
   const icebreakerEntries = iceRows.map((e) => ({
     id: e.id,
     participantId: e.participantId,
     round: e.round,
     kind: e.kind,
-    payload: e.payload,
+    payload:
+      e.kind === "statements" && e.participantId !== myP?.id && e.participantId !== revealedTarget
+        ? (({ lie: _lie, ...rest }) => rest)(e.payload as Record<string, unknown>)
+        : e.payload,
     mine: e.participantId === myP?.id,
     createdAt: e.createdAt.toISOString(),
   }));
@@ -553,7 +565,7 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
       presenting: meeting.presenting ?? null,
       checkIn: meeting.checkIn ?? null,
       checkOut: meeting.checkOut ?? null,
-      icebreaker: meeting.icebreaker ?? null,
+      icebreaker,
       notes: meeting.notes,
       aiSummary: meeting.aiSummary,
       collectingUntil: meeting.collectingUntil?.toISOString() ?? null,

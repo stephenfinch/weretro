@@ -1110,6 +1110,22 @@ export async function applyOp(ctx: MeetingContext, op: Op): Promise<unknown> {
       return;
     }
 
+    case "icebreaker.clear": {
+      const p = ensureMember(ctx);
+      const all = bool(op.all) && isFacilitating(ctx);
+      await db
+        .delete(schema.icebreakerEntries)
+        .where(
+          and(
+            eq(schema.icebreakerEntries.meetingId, m.id),
+            all ? sql`true` : eq(schema.icebreakerEntries.participantId, p.id),
+            op.kind ? eq(schema.icebreakerEntries.kind, String(op.kind)) : sql`true`,
+            op.round !== undefined ? eq(schema.icebreakerEntries.round, num(op.round)) : sql`true`,
+          ),
+        );
+      return;
+    }
+
     default:
       throw new HttpError(400, `Unknown operation ${op.type}`);
   }
