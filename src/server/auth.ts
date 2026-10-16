@@ -82,7 +82,13 @@ export async function userFromToken(token: string | undefined | null): Promise<C
     .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))
     .where(and(eq(schema.sessions.id, sha256(token)), gt(schema.sessions.expiresAt, new Date())))
     .limit(1);
-  return rows[0]?.user ?? null;
+  const user = rows[0]?.user ?? null;
+  if (user && (!user.lastSeenAt || Date.now() - user.lastSeenAt.getTime() > 5 * 60_000)) {
+    const now = new Date();
+    user.lastSeenAt = now;
+    await db.update(schema.users).set({ lastSeenAt: now }).where(eq(schema.users.id, user.id));
+  }
+  return user;
 }
 
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {

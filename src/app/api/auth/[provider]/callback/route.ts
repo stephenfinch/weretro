@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getProvider, fetchProfile } from "@/server/oauth";
-import { createSession, createUser, findUserByEmail } from "@/server/auth";
+import { createSession, createUser, findUserByEmail, getCurrentUser } from "@/server/auth";
+import { captureByDomain } from "@/server/orgs";
 import { markJoined } from "@/server/orgs";
 
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/auth/[provider]/callback">) {
@@ -24,11 +25,13 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/auth/[provid
       .limit(1);
     let userId = link?.userId;
     if (!userId) {
-      let user = profile.email ? await findUserByEmail(profile.email) : null;
+      let user = (await getCurrentUser()) ?? (profile.email ? await findUserByEmail(profile.email) : null);
+      if (user?.isGuest) user = null;
       if (!user) user = await createUser({ email: profile.email, name: profile.name, verified: true });
       userId = user.id;
       await db.insert(schema.oauthAccounts).values({ provider, providerUserId: profile.id, userId }).onConflictDoNothing();
       await db.update(schema.users).set({ emailVerifiedAt: new Date() }).where(eq(schema.users.id, userId));
+      await captureByDomain(userId, profile.email);
     }
     await createSession(userId);
     await markJoined(userId);

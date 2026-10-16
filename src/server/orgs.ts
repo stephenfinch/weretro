@@ -187,3 +187,13 @@ export async function teamMemberCounts(teamIds: string[]) {
     .groupBy(schema.members.teamId);
   return new Map(rows.map((r) => [r.teamId, r.n]));
 }
+
+// Domain capture: verified users whose email domain an org has claimed join that org automatically.
+export async function captureByDomain(userId: string, email: string | null | undefined) {
+  const domain = email?.split("@")[1]?.toLowerCase();
+  if (!domain) return;
+  const orgs = await db.select().from(schema.organizations).where(sql`${schema.organizations.settings}->>'domainCapture' = 'true'`);
+  for (const org of orgs) {
+    if ((org.settings.allowedDomains ?? []).includes(domain)) await ensureOrgUser(org.id, userId);
+  }
+}
