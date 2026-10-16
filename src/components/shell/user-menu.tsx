@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTheme } from "@/components/theme";
-import { LogOut, Monitor, Moon, Sun, User, Bell, Plus, Check, Building2, HelpCircle } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun, User, Bell, Plus, Check, Building2, HelpCircle, Sparkles } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,7 +46,10 @@ export function UserMenu({ user }: { user: { name: string; email: string | null;
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <a href="https://github.com/" target="_blank" rel="noreferrer"><HelpCircle /> Help & source code</a>
+          <a href={process.env.NEXT_PUBLIC_REPO_URL || "https://github.com/"} target="_blank" rel="noreferrer"><HelpCircle /> Help & source code</a>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/whats-new"><Sparkles /> What&apos;s new</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <a href="/logout"><LogOut /> Sign out</a>

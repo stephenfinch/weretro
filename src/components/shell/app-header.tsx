@@ -12,11 +12,14 @@ export async function AppHeader({
   org,
   isAdmin,
   canInsights,
+  extra,
 }: {
   user: CurrentUser;
   org?: { slug: string; name: string; color: string; id: string };
   isAdmin?: boolean;
   canInsights?: boolean;
+  /** Slot rendered before search, eg. the getting-started checklist. */
+  extra?: React.ReactNode;
 }) {
   const orgs = await listUserOrgs(user.id);
   const base = org ? `/o/${org.slug}` : "";
@@ -36,6 +39,7 @@ export async function AppHeader({
         <OrgSwitcher orgs={orgs.map((o) => ({ slug: o.org.slug, name: o.org.name, color: o.org.color }))} current={org} />
         {items.length > 0 && <NavTabs items={items} className="ml-2 hidden h-14 items-end md:flex" />}
         <div className="ml-auto flex items-center gap-2">
+          {extra}
           {org && <SearchButton orgId={org.id} />}
           <UserMenu user={{ name: user.name, email: user.email, color: user.color, avatarUrl: mediaUrl(user.avatarMediaId) }} />
         </div>

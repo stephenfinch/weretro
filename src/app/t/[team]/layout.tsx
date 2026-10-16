@@ -10,6 +10,8 @@ import { TeamLogo } from "@/components/team/team-card";
 import { TeamMenu } from "@/components/team/team-menu";
 import { Badge } from "@/components/ui/badge";
 import { mediaUrl } from "@/server/meetings/state";
+import { GettingStarted } from "@/components/shell/getting-started";
+import { teamChecklist } from "@/server/getting-started";
 
 export default async function TeamLayout({ children, params }: LayoutProps<"/t/[team]">) {
   const { team: teamId } = await params;
@@ -17,6 +19,7 @@ export default async function TeamLayout({ children, params }: LayoutProps<"/t/[
   const access = await getTeamAccess(user, teamId);
   if (!access) notFound();
   const { team, org } = access;
+  const checklist = access.isAdmin && !team.archivedAt ? await teamChecklist(user, team.id) : [];
   const base = `/t/${team.id}`;
   const tabs = [
     { href: base, label: "Home", exact: true },
@@ -32,7 +35,7 @@ export default async function TeamLayout({ children, params }: LayoutProps<"/t/[
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       <RememberOrg slug={org.slug} />
-      <AppHeader user={user} org={{ id: org.id, slug: org.slug, name: org.name, color: org.color }} isAdmin={access.orgUser?.roles.includes("admin") || access.orgUser?.roles.includes("owner")} canInsights={!!access.orgUser && (access.orgUser.roles.includes("admin") || access.orgUser.roles.includes("insightsViewer"))} />
+      <AppHeader user={user} org={{ id: org.id, slug: org.slug, name: org.name, color: org.color }} isAdmin={access.orgUser?.roles.includes("admin") || access.orgUser?.roles.includes("owner")} canInsights={!!access.orgUser && (access.orgUser.roles.includes("admin") || access.orgUser.roles.includes("insightsViewer"))} extra={checklist.length ? <GettingStarted items={checklist} total={6} /> : null} />
       <div className="relative border-b bg-background no-print">
         {team.coverMediaId && (
           // eslint-disable-next-line @next/next/no-img-element

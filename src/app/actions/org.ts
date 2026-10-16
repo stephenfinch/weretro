@@ -262,3 +262,10 @@ export async function revokeConnectedApp(orgId: string, grantId: string) {
     await db.update(schema.oauthGrants).set({ revokedAt: new Date() }).where(eq(schema.oauthGrants.id, grantId));
   });
 }
+
+export async function dismissTip(key: string) {
+  const user = await requireUser();
+  const options = (user.options ?? {}) as { dismissedTips?: string[] };
+  const tips = [...new Set([...(options.dismissedTips ?? []), key.slice(0, 120)])].slice(-200);
+  await db.update(schema.users).set({ options: { ...options, dismissedTips: tips } }).where(eq(schema.users.id, user.id));
+}
