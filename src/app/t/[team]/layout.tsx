@@ -26,7 +26,7 @@ export default async function TeamLayout({ children, params }: LayoutProps<"/t/[
     { href: `${base}/estimations`, label: "Estimations" },
     { href: `${base}/members`, label: "Members" },
     { href: `${base}/insights`, label: "Insights" },
-    ...(access.isAdmin ? [{ href: `${base}/settings`, label: "Settings" }] : []),
+    ...(access.isAdmin || access.member ? [{ href: `${base}/settings`, label: "Settings" }] : []),
   ];
   const role = access.roles.includes("admin") ? "Admin" : access.isMember ? "Member" : access.roles.includes("observer") ? "Observer" : access.isAdmin ? "Org admin" : "Viewer";
   return (

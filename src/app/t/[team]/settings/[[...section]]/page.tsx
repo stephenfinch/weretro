@@ -10,7 +10,7 @@ import { mediaUrl } from "@/server/meetings/state";
 import { aiFeature } from "@/server/ai";
 import { integrationDef } from "@/lib/integrations";
 import { cn } from "@/lib/utils";
-import { ApiKeysSection, DecksSection, DeletedSection, GeneralSection, HealthModelsSection, IntegrationsSection, RolesSection, TemplatesSection } from "@/components/settings/sections";
+import { ApiKeysSection, DecksSection, DeletedSection, GeneralSection, HealthModelsSection, IntegrationsSection, RolesSection, TeamNotificationsSection, TemplatesSection } from "@/components/settings/sections";
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000);
 
@@ -23,6 +23,7 @@ const SECTIONS = [
   ["integrations", "Integrations"],
   ["api", "API keys"],
   ["roles", "Roles & permissions"],
+  ["notifications", "Notifications"],
   ["deleted", "Recently deleted"],
 ] as const;
 
@@ -32,7 +33,8 @@ export default async function TeamSettingsPage({ params }: PageProps<"/t/[team]/
   const user = await requireUser();
   const access = await getTeamAccess(user, teamId);
   if (!access) notFound();
-  if (!access.isAdmin) redirect(`/t/${teamId}`);
+  // Members can open settings to choose their own notifications; everything else is for admins.
+  if (!access.isAdmin && (!access.member || section !== "notifications")) redirect(access.member ? `/t/${teamId}/settings/notifications` : `/t/${teamId}`);
   const { team, org } = access;
   const orgAdmin = isOrgAdmin(access.orgUser);
   const base = `/t/${teamId}/settings`;
@@ -101,6 +103,13 @@ export default async function TeamSettingsPage({ params }: PageProps<"/t/[team]/
       content = <ApiKeysSection orgId={org.id} teamId={teamId} keys={keys} disabled={org.settings.teamApiKeys === false} />;
       break;
     }
+    case "notifications":
+      if (!access.member) {
+        content = <p className="text-sm text-muted-foreground">Join this team to choose its notifications.</p>;
+        break;
+      }
+      content = <TeamNotificationsSection teamId={teamId} prefs={access.member.notificationPreferences} reminders={access.member.reminders} />;
+      break;
     case "roles":
       content = <RolesSection teamId={teamId} permissions={team.options.permissions ?? {}} />;
       break;
@@ -128,7 +137,7 @@ export default async function TeamSettingsPage({ params }: PageProps<"/t/[team]/
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 md:flex-row">
       <nav className="flex shrink-0 gap-1 overflow-x-auto md:w-56 md:flex-col">
-        {SECTIONS.map(([key, label]) => (
+        {SECTIONS.filter(([key]) => access.isAdmin || key === "notifications").map(([key, label]) => (
           <Link key={key} href={key === "general" ? base : `${base}/${key}`} className={cn("rounded-lg px-3 py-2 text-sm whitespace-nowrap hover:bg-muted", section === key ? "bg-muted font-medium" : "text-muted-foreground")}>
             {label}
           </Link>

@@ -4,7 +4,8 @@ import { db, schema } from "@/db";
 import { appUrl } from "../auth";
 import { escapeHtml, layout, sendMail } from "../email";
 import { dispatchEvent } from "../integrations/events";
-import { wantsNotification } from "../notifications";
+import { teamPrefs, wantsNotification } from "../notifications";
+import { teamWants } from "@/lib/team-notifications";
 import { MEETING_TYPE_LABEL } from "@/lib/constants";
 import type { MeetingType } from "@/lib/types";
 
@@ -70,7 +71,10 @@ ${list.length ? `<p><strong>Actions</strong></p><ul>${list.map((a) => `<li>${esc
       .from(schema.participants)
       .innerJoin(schema.users, eq(schema.users.id, schema.participants.userId))
       .where(eq(schema.participants.meetingId, meetingId));
-    emails = rows.filter((r) => r.u.email && !r.u.isGuest && wantsNotification(r.u.notificationPreferences, "meeting.summary")).map((r) => r.u.email!);
+    const prefs = await teamPrefs(m.teamId);
+    emails = rows
+      .filter((r) => r.u.email && !r.u.isGuest && wantsNotification(r.u.notificationPreferences, "meeting.summary") && teamWants(prefs.get(r.u.id), `summary.${m.type}`))
+      .map((r) => r.u.email!);
   }
   for (const to of emails) {
     await sendMail({

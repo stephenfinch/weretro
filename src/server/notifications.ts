@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { appUrl, type CurrentUser } from "./auth";
 import { escapeHtml, layout, sendMail } from "./email";
 import { KUDOS_TYPES } from "@/lib/constants";
+import { teamWants } from "@/lib/team-notifications";
 
 export const NOTIFICATION_EVENTS: { key: string; category: string; label: string; default: boolean }[] = [
   { key: "mentions", category: "Mentions & kudos", label: "When someone @mentions you", default: true },
@@ -16,6 +17,12 @@ export const NOTIFICATION_EVENTS: { key: string; category: string; label: string
   { key: "team.added", category: "Teams", label: "When you're added to a team", default: true },
   { key: "requests", category: "Admin", label: "Team and access requests", default: true },
 ];
+
+/** Each member's per-team notification switches, keyed by user id. */
+export async function teamPrefs(teamId: string) {
+  const rows = await db.select({ userId: schema.members.userId, prefs: schema.members.notificationPreferences }).from(schema.members).where(eq(schema.members.teamId, teamId));
+  return new Map(rows.map((r) => [r.userId, r.prefs as Record<string, unknown>]));
+}
 
 export function wantsNotification(prefs: Record<string, unknown> | null | undefined, key: string) {
   const v = prefs?.[key];
@@ -38,9 +45,10 @@ export async function notifyMentions(input: { teamId: string; meetingId?: string
     if (lower.includes(`@${u.name.toLowerCase()}`) || (first && new RegExp(`@${first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(lower))) targets.add(u.id);
   }
   if (!targets.size) return;
+  const prefs = await teamPrefs(input.teamId);
   const link = appUrl(input.meetingId ? `/m/${input.meetingId}` : `/t/${input.teamId}`);
   for (const { u } of members) {
-    if (!targets.has(u.id) || !u.email || !wantsNotification(u.notificationPreferences, "mentions")) continue;
+    if (!targets.has(u.id) || !u.email || !wantsNotification(u.notificationPreferences, "mentions") || !teamWants(prefs.get(u.id), "mentions")) continue;
     await sendMail({
       to: u.email,
       subject: `${input.fromUser.name} mentioned you`,
@@ -52,6 +60,7 @@ export async function notifyMentions(input: { teamId: string; meetingId?: string
 export async function notifyKudos(input: { fromUser: CurrentUser; toUserId: string; teamId: string; type: string; message: string }) {
   const [u] = await db.select().from(schema.users).where(eq(schema.users.id, input.toUserId)).limit(1);
   if (!u?.email || !wantsNotification(u.notificationPreferences, "kudos")) return;
+  if (!teamWants((await teamPrefs(input.teamId)).get(u.id), "kudos")) return;
   const k = KUDOS_TYPES.find((t) => t.key === input.type);
   await sendMail({
     to: u.email,

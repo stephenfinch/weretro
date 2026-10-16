@@ -101,6 +101,19 @@ export async function setReminderPreference(teamId: string, reminders: "all" | "
   });
 }
 
+export async function saveTeamNotifications(teamId: string, prefs: Record<string, boolean>, reminders: "all" | "assignedToMe") {
+  return wrap(async () => {
+    const user = await requireUser();
+    const clean = Object.fromEntries(Object.entries(prefs).filter(([k, v]) => /^[a-zA-Z.]+$/.test(k) && typeof v === "boolean"));
+    const res = await db
+      .update(schema.members)
+      .set({ notificationPreferences: clean, reminders })
+      .where(and(eq(schema.members.teamId, teamId), eq(schema.members.userId, user.id)))
+      .returning({ id: schema.members.id });
+    if (!res.length) throw new HttpError(403, "Join this team to choose its notifications");
+  });
+}
+
 export async function shareActionsByEmail(teamId: string, input: { recipients: string[]; scope: "all" | "assigned"; meetingId?: string }) {
   return wrap(async () => {
     const user = await requireUser();

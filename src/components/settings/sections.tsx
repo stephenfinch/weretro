@@ -18,7 +18,8 @@ import { PALETTE, PERMISSION_LABEL, DEFAULT_PERMISSIONS, BUILTIN_DECKS } from "@
 import { INTEGRATIONS, integrationDef } from "@/lib/integrations";
 import type { DeckCard, TeamPermissionKey, TeamRole, TemplateBody } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { updateTeamAction, archiveTeamAction, deleteTeamAction, restoreMeeting, restoreSeries } from "@/app/actions/teams";
+import { updateTeamAction, archiveTeamAction, deleteTeamAction, restoreMeeting, restoreSeries, saveTeamNotifications } from "@/app/actions/teams";
+import { TEAM_NOTIFICATIONS, TEAM_NOTIFICATION_GROUPS } from "@/lib/team-notifications";
 import { createApiKey, deleteIntegration, integrationLogs, revokeApiKey, saveIntegration, testIntegrationAction } from "@/app/actions/integrations";
 import { updateDeckScope, updateHealthModelScope, updateTemplateScope } from "@/app/actions/templates";
 import { uploadImage } from "@/components/meeting/attachments";
@@ -528,4 +529,48 @@ export function NotificationsSection({ items, values, onSave }: { items: { key: 
 
 function daysLeft(deletedAt: Date) {
   return Math.max(0, 30 - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86400000));
+}
+
+export function TeamNotificationsSection({ teamId, prefs, reminders }: { teamId: string; prefs: Record<string, unknown>; reminders: string }) {
+  const [v, setV] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries([...TEAM_NOTIFICATIONS.map((n) => n.key), ...TEAM_NOTIFICATION_GROUPS.map((g) => `group.${g.key}`)].map((k) => [k, prefs[k] !== false])),
+  );
+  const [scope, setScope] = useState<"all" | "assignedToMe">(reminders === "all" ? "all" : "assignedToMe");
+  const { pending, run } = useAct();
+  const save = (next: Record<string, boolean>, nextScope = scope) => {
+    setV(next);
+    run(() => saveTeamNotifications(teamId, next, nextScope));
+  };
+  return (
+    <Section title="Team notifications" description="Applies to this team only. Your email preferences for all teams are in your profile.">
+      {TEAM_NOTIFICATION_GROUPS.map((g) => {
+        const on = v[`group.${g.key}`];
+        return (
+          <div key={g.key} className="overflow-hidden rounded-xl border">
+            <label className="flex items-center justify-between bg-muted/50 px-4 py-2.5 text-sm font-medium">
+              {g.label}
+              <Switch checked={on} disabled={pending} onCheckedChange={(x) => save({ ...v, [`group.${g.key}`]: x })} />
+            </label>
+            {TEAM_NOTIFICATIONS.filter((n) => n.group === g.key).map((n) => (
+              <div key={n.key} className={cn("flex items-center gap-3 border-t px-4 py-2.5 text-sm", !on && "opacity-50")}>
+                <span className="min-w-0 flex-1">
+                  {n.label} <span className="text-muted-foreground">— {n.hint}</span>
+                </span>
+                {n.key === "actionReminders" && (
+                  <Select value={scope} onValueChange={(x) => { setScope(x as typeof scope); save(v, x as typeof scope); }} disabled={!on || !v[n.key]}>
+                    <SelectTrigger size="sm" className="w-40"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="assignedToMe">My actions only</SelectItem>
+                      <SelectItem value="all">All team actions</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+                <Switch checked={v[n.key]} disabled={!on || pending} onCheckedChange={(x) => save({ ...v, [n.key]: x })} />
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </Section>
+  );
 }

@@ -8,7 +8,8 @@ import { mergeSteps, resolveDeck } from "./create";
 import { onMeetingClosed } from "./lifecycle";
 import { DEFAULT_OPTIONS, MEETING_TYPE_LABEL } from "@/lib/constants";
 import type { Anonymity, MeetingOptions, MeetingStep, MeetingType, SeriesSchedule, Topic } from "@/lib/types";
-import { wantsNotification } from "../notifications";
+import { teamPrefs, wantsNotification } from "../notifications";
+import { teamWants } from "@/lib/team-notifications";
 import { emitTeamChange } from "../realtime";
 
 type Series = typeof schema.meetingSeries.$inferSelect;
@@ -129,8 +130,10 @@ export async function runScheduler(now = new Date()) {
           .from(schema.participants)
           .innerJoin(schema.users, eq(schema.users.id, schema.participants.userId))
           .where(and(eq(schema.participants.meetingId, meeting.id), ne(schema.participants.role, "observer")));
+        const prefs = await teamPrefs(team.id);
         for (const { u } of users) {
           if (!u.email || !wantsNotification(u.notificationPreferences, s.type === "standup" ? "standup.reminder" : "meeting.invite")) continue;
+          if (!teamWants(prefs.get(u.id), `open.${s.type}`)) continue;
           await sendMail({
             to: u.email,
             subject: `${s.title || label} is open for ${team.name}`,
@@ -150,8 +153,10 @@ export async function runScheduler(now = new Date()) {
           .innerJoin(schema.users, eq(schema.users.id, schema.participants.userId))
           .where(and(eq(schema.participants.meetingId, meeting.id), inArray(schema.participants.role, ["participant", "facilitator"])));
         const stepKey = s.type === "standup" ? "standup" : s.type === "healthCheck" ? "healthSurvey" : "brainstorm";
+        const prefs = await teamPrefs(team.id);
         for (const { u, p } of pending) {
           if (p.finishedSteps.includes(stepKey) || !u.email || !wantsNotification(u.notificationPreferences, "standup.reminder")) continue;
+          if (!teamWants(prefs.get(u.id), `reminder.${s.type}`)) continue;
           await sendMail({
             to: u.email,
             subject: `Reminder: ${s.title || MEETING_TYPE_LABEL[s.type as MeetingType]} is waiting on you`,
@@ -190,7 +195,7 @@ export async function sendActionReminders(now = new Date()) {
   for (const [teamId, rows] of byTeam) {
     const members = await db.select({ m: schema.members, u: schema.users }).from(schema.members).innerJoin(schema.users, eq(schema.users.id, schema.members.userId)).where(eq(schema.members.teamId, teamId));
     for (const { m, u } of members) {
-      if (!u.email || m.reminders === "none" || !wantsNotification(u.notificationPreferences, "actionReminders")) continue;
+      if (!u.email || m.reminders === "none" || !wantsNotification(u.notificationPreferences, "actionReminders") || !teamWants(m.notificationPreferences, "actionReminders")) continue;
       const mine = rows.filter((r) => m.reminders === "all" || r.a.assigneeIds.includes(u.id));
       if (!mine.length || !(await onceKey(`actions:${u.id}:${teamId}:${today}`))) continue;
       await sendMail({
