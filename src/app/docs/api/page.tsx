@@ -77,6 +77,11 @@ export default function ApiDocs() {
           <p className="text-sm text-muted-foreground">
             WeRetro is also a Model Context Protocol server, so AI assistants like Claude can list actions, read meeting summaries, create actions and start meetings. It uses the Streamable HTTP transport at <code>{base}/api/mcp</code>. Write tools only appear for keys with the <code>write</code> scope.
           </p>
+<p className="text-sm text-muted-foreground">
+            <strong>Sign in with OAuth (recommended).</strong> MCP clients that support OAuth discover WeRetro&apos;s authorization server automatically, open a consent screen, and act as the person who connected them, seeing only what that person can see. Admins can turn this off in Organization settings → API & connected apps, and anyone can disconnect apps from their profile.
+          </p>
+          <Code>{`claude mcp add --transport http weretro ${base}/api/mcp`}</Code>
+          <p className="text-sm text-muted-foreground"><strong>Or use an API key</strong> as a bearer token:</p>
           <Code>{`claude mcp add --transport http weretro ${base}/api/mcp \\\n  --header "Authorization: Bearer wr_…"`}</Code>
           <p className="text-sm text-muted-foreground">Tools: <code>list_teams</code>, <code>list_team_members</code>, <code>list_actions</code>, <code>create_action</code>, <code>update_action</code>, <code>list_meetings</code>, <code>get_meeting</code>, <code>create_meeting</code>, <code>get_team_health</code>.</p>
         </section>

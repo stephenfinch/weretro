@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { HttpError } from "@/server/access";
 import * as api from "@/server/api/service";
+import { appUrl } from "@/server/auth";
 
 /**
  * Model Context Protocol server (Streamable HTTP transport, stateless, JSON responses).
@@ -84,7 +85,7 @@ async function dispatch(p: api.Principal, msg: RpcRequest) {
     case "ping":
       return {};
     case "tools/list":
-      return { tools: TOOLS.filter((t) => !t.write || p.key.scopes.includes("write")).map(({ name, description, inputSchema, write }) => ({ name, description, inputSchema, annotations: { readOnlyHint: !write } })) };
+      return { tools: TOOLS.filter((t) => !t.write || p.scopes.includes("write")).map(({ name, description, inputSchema, write }) => ({ name, description, inputSchema, annotations: { readOnlyHint: !write } })) };
     case "tools/call": {
       const name = String(msg.params?.name ?? "");
       const tool = TOOLS.find((t) => t.name === name);
@@ -108,7 +109,10 @@ export async function POST(req: NextRequest) {
     principal = await api.authenticate(req);
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 401;
-    return NextResponse.json({ jsonrpc: "2.0", id: null, error: { code: -32001, message: e instanceof Error ? e.message : "Unauthorized" } }, { status, headers: { "www-authenticate": "Bearer" } });
+    return NextResponse.json(
+      { jsonrpc: "2.0", id: null, error: { code: -32001, message: e instanceof Error ? e.message : "Unauthorized" } },
+      { status, headers: { "www-authenticate": `Bearer resource_metadata="${appUrl("/.well-known/oauth-protected-resource")}"` } },
+    );
   }
   let body: RpcRequest | RpcRequest[];
   try {

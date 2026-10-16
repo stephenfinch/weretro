@@ -176,7 +176,7 @@ async function handle(req: NextRequest, ctx: RouteContext<"/api/scim/v2/[...path
   try {
     const p = await authenticate(req);
     requireScope(p, "scim");
-    if (p.key.teamId) throw new HttpError(403, "SCIM requires an account API key");
+    if (p.via !== "key" || p.teamId) throw new HttpError(403, "SCIM requires an account API key");
     const { path } = await ctx.params;
     const [resource, id] = path;
 

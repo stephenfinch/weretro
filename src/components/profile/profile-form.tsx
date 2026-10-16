@@ -10,14 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserAvatar } from "@/components/user-avatar";
 import { NotificationsSection, Section } from "@/components/settings/sections";
 import { uploadImage } from "@/components/meeting/attachments";
-import { changePasswordAction, deleteAccountAction, saveNotificationPrefs, updateProfileAction } from "@/app/actions/org";
+import { changePasswordAction, deleteAccountAction, revokeConnectedApp, saveNotificationPrefs, updateProfileAction } from "@/app/actions/org";
+import { formatDistanceToNow } from "date-fns";
 import { PALETTE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const ZONES: string[] = typeof Intl !== "undefined" && "supportedValuesOf" in Intl ? (Intl as unknown as { supportedValuesOf: (k: string) => string[] }).supportedValuesOf("timeZone") : [];
 const TIMEZONES = ["UTC", ...ZONES.filter((z) => z !== "UTC")];
 
-export function ProfileForm({ user, providers, available }: { user: { name: string; email: string | null; color: string; avatarUrl: string | null; timezone: string; language: string; hasPassword: boolean }; providers: string[]; available: Record<string, boolean> }) {
+export function ProfileForm({ user, providers, available, apps }: { user: { name: string; email: string | null; color: string; avatarUrl: string | null; timezone: string; language: string; hasPassword: boolean }; providers: string[]; available: Record<string, boolean>; apps: { id: string; orgId: string; clientName: string; orgName: string; createdAt: Date; lastUsedAt: Date | null }[] }) {
   const [name, setName] = useState(user.name);
   const [color, setColor] = useState(user.color);
   const [timezone, setTimezone] = useState(user.timezone);
@@ -106,6 +107,22 @@ export function ProfileForm({ user, providers, available }: { user: { name: stri
           </div>
         </Section>
       )}
+
+      <Section title="Connected apps" description="AI assistants and other apps you've allowed to use WeRetro for you.">
+        {apps.length ? (
+          <ul className="divide-y text-sm">
+            {apps.map((a) => (
+              <li key={a.id} className="flex items-center gap-3 py-2">
+                <span className="flex-1"><span className="font-medium">{a.clientName}</span> <span className="text-muted-foreground">· {a.orgName}</span></span>
+                <span className="text-xs text-muted-foreground">{a.lastUsedAt ? `Used ${formatDistanceToNow(new Date(a.lastUsedAt), { addSuffix: true })}` : `Connected ${formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}`}</span>
+                <Button size="xs" variant="ghost" disabled={pending} onClick={() => run(() => revokeConnectedApp(a.orgId, a.id), "Disconnected")}>Disconnect</Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No apps connected.</p>
+        )}
+      </Section>
 
       <Section title="Delete account" description="Removes you from every organization and team. Your past contributions stay in meeting history without your name.">
         <div className="flex max-w-md gap-2">

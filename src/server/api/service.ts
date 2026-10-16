@@ -20,15 +20,22 @@ import type { MeetingType } from "@/lib/types";
  */
 
 export type Principal = {
-  key: typeof schema.apiKeys.$inferSelect;
+  /** "key": an API key (acts as its creator, limited to a team for team keys). "oauth": an app a person connected. */
+  via: "key" | "oauth";
+  id: string;
+  teamId: string | null;
+  scopes: string[];
   org: typeof schema.organizations.$inferSelect;
   user: CurrentUser;
 };
+
+export const OAUTH_TOKEN_PREFIX = "wro_";
 
 export async function authenticate(req: Request): Promise<Principal> {
   const header = req.headers.get("authorization") ?? "";
   const token = header.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : req.headers.get("x-api-key")?.trim();
   if (!token) throw new HttpError(401, "Missing API key. Send it as `Authorization: Bearer <key>`.");
+  if (token.startsWith(OAUTH_TOKEN_PREFIX)) return authenticateOAuth(req, token);
   const [key] = await db.select().from(schema.apiKeys).where(eq(schema.apiKeys.keyHash, sha256(token))).limit(1);
   if (!key || key.revokedAt) throw new HttpError(401, "Invalid or revoked API key");
   const [org] = await db.select().from(schema.organizations).where(eq(schema.organizations.id, key.orgId)).limit(1);
@@ -41,25 +48,58 @@ export async function authenticate(req: Request): Promise<Principal> {
   if (!key.lastUsedAt || Date.now() - key.lastUsedAt.getTime() > 60_000) {
     await db.update(schema.apiKeys).set({ lastUsedAt: new Date() }).where(eq(schema.apiKeys.id, key.id));
   }
-  return { key, org, user };
+  return { via: "key", id: key.id, teamId: key.teamId, scopes: key.scopes, org, user };
+}
+
+async function authenticateOAuth(req: Request, token: string): Promise<Principal> {
+  const [grant] = await db.select().from(schema.oauthGrants).where(eq(schema.oauthGrants.accessTokenHash, sha256(token))).limit(1);
+  if (!grant || grant.revokedAt || grant.accessExpiresAt < new Date()) throw new HttpError(401, "Invalid or expired access token");
+  const [org] = await db.select().from(schema.organizations).where(eq(schema.organizations.id, grant.orgId)).limit(1);
+  if (!org || org.settings.connectedApps === false) throw new HttpError(403, "Connected apps are turned off for this organization");
+  const { assertIpAllowed, ipFromHeaders } = await import("../ip");
+  await assertIpAllowed(org, ipFromHeaders(req.headers));
+  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, grant.userId)).limit(1);
+  const [ou] = user ? await db.select().from(schema.orgUsers).where(and(eq(schema.orgUsers.orgId, org.id), eq(schema.orgUsers.userId, user.id))).limit(1) : [];
+  if (!user || !ou?.active) throw new HttpError(401, "This account no longer has access");
+  if (!grant.lastUsedAt || Date.now() - grant.lastUsedAt.getTime() > 60_000) {
+    await db.update(schema.oauthGrants).set({ lastUsedAt: new Date() }).where(eq(schema.oauthGrants.id, grant.id));
+  }
+  return { via: "oauth", id: grant.id, teamId: null, scopes: grant.scope.split(/\s+/), org, user };
 }
 
 export function requireScope(p: Principal, scope: "read" | "write" | "scim") {
-  if (!p.key.scopes.includes(scope)) throw new HttpError(403, `This API key doesn't have the "${scope}" scope`);
+  if (!p.scopes.includes(scope)) throw new HttpError(403, `This ${p.via === "key" ? "API key" : "connection"} doesn't have the "${scope}" scope`);
+}
+
+/** Teams an OAuth principal (a person) can see: their own, or all when they're an org admin or transparency is on. */
+async function personTeamIds(p: Principal) {
+  const { getOrgUser, isOrgAdmin } = await import("../access");
+  const ou = await getOrgUser(p.org.id, p.user.id);
+  if (isOrgAdmin(ou) || p.org.settings.teamTransparency) return null;
+  const rows = await db.select({ teamId: schema.members.teamId }).from(schema.members).where(eq(schema.members.userId, p.user.id));
+  return rows.map((r) => r.teamId);
 }
 
 async function allowedTeams(p: Principal) {
+  const ids = p.via === "oauth" ? await personTeamIds(p) : null;
+  if (ids && !ids.length) return [];
   return db
     .select()
     .from(schema.teams)
-    .where(and(eq(schema.teams.orgId, p.org.id), isNull(schema.teams.deletedAt), p.key.teamId ? eq(schema.teams.id, p.key.teamId) : undefined))
+    .where(and(eq(schema.teams.orgId, p.org.id), isNull(schema.teams.deletedAt), p.teamId ? eq(schema.teams.id, p.teamId) : undefined, ids ? inArray(schema.teams.id, ids) : undefined))
     .orderBy(asc(schema.teams.name));
 }
 
-async function team(p: Principal, teamId: string) {
-  if (p.key.teamId && p.key.teamId !== teamId) throw new HttpError(404, "Team not found");
+async function team(p: Principal, teamId: string, write = false) {
+  if (p.teamId && p.teamId !== teamId) throw new HttpError(404, "Team not found");
   const [t] = await db.select().from(schema.teams).where(and(eq(schema.teams.id, teamId), eq(schema.teams.orgId, p.org.id), isNull(schema.teams.deletedAt))).limit(1);
   if (!t) throw new HttpError(404, "Team not found");
+  if (p.via === "oauth") {
+    const { getTeamAccess } = await import("../access");
+    const access = await getTeamAccess(p.user, teamId);
+    if (!access) throw new HttpError(404, "Team not found");
+    if (write && access.isViewer) throw new HttpError(403, "You can only view this team");
+  }
   return t;
 }
 
@@ -149,7 +189,7 @@ async function resolveAssignees(teamId: string, input: unknown) {
 
 export async function createAction(p: Principal, teamId: string, input: { title?: unknown; kind?: unknown; description?: unknown; assignees?: unknown; dueDate?: unknown; priority?: unknown }) {
   requireScope(p, "write");
-  await team(p, teamId);
+  await team(p, teamId, true);
   const title = String(input.title ?? "").trim().slice(0, 1000);
   if (!title) throw new HttpError(400, "title is required");
   const kind = (KINDS as readonly string[]).includes(String(input.kind ?? "action")) ? (String(input.kind ?? "action") as Kind) : "action";
@@ -170,7 +210,7 @@ export async function updateAction(p: Principal, actionId: string, input: Record
   requireScope(p, "write");
   const [a] = await db.select().from(schema.actionItems).where(and(eq(schema.actionItems.id, actionId), isNull(schema.actionItems.deletedAt))).limit(1);
   if (!a) throw new HttpError(404, "Action not found");
-  await team(p, a.teamId);
+  await team(p, a.teamId, true);
   const patch: Record<string, unknown> = {};
   for (const k of ["title", "description", "status", "dueDate", "priority", "kind"]) if (input[k] !== undefined) patch[k] = input[k];
   if (input.assignees !== undefined) patch.assigneeIds = await resolveAssignees(a.teamId, input.assignees);
@@ -184,7 +224,7 @@ export async function deleteAction(p: Principal, actionId: string) {
   requireScope(p, "write");
   const [a] = await db.select().from(schema.actionItems).where(and(eq(schema.actionItems.id, actionId), isNull(schema.actionItems.deletedAt))).limit(1);
   if (!a) throw new HttpError(404, "Action not found");
-  await team(p, a.teamId);
+  await team(p, a.teamId, true);
   await db.update(schema.actionItems).set({ deletedAt: new Date() }).where(eq(schema.actionItems.id, actionId));
   await bumpTeamMeetings(a.teamId);
   return { deleted: true };
@@ -253,7 +293,7 @@ export async function getMeeting(p: Principal, meetingId: string) {
 
 export async function createMeetingFor(p: Principal, teamId: string, input: { type?: unknown; title?: unknown; templateId?: unknown; healthModelId?: unknown; deckId?: unknown; date?: unknown }) {
   requireScope(p, "write");
-  await team(p, teamId);
+  await team(p, teamId, true);
   const type = String(input.type ?? "retrospective") as MeetingType;
   if (!MEETING_TYPES.includes(type)) throw new HttpError(400, `type must be one of ${MEETING_TYPES.join(", ")}`);
   const m = await createMeeting(p.user, teamId, {
