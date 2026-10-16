@@ -22,7 +22,7 @@ export function useCurrentItem() {
 }
 
 export function EstimateStep() {
-  const { state, op } = useMeeting();
+  const { state, op, ops } = useMeeting();
   const { items, current } = useCurrentItem();
   const fac = state.me.isFacilitator;
   if (!current) {
@@ -34,8 +34,12 @@ export function EstimateStep() {
     );
   }
   const idx = items.findIndex((i) => i.id === current.id);
-  const goto = (it: EstimationItemDTO) => fac && void op("present.set", { active: true, targetId: it.id });
-  const setPhase = (phase: string) => void op("estimation.update", { id: current.id, phase });
+  const goto = (it: EstimationItemDTO) => fac && void op("present.set", { active: !!state.meeting.presenting?.active, targetId: it.id });
+  const setPhase = (phase: string) =>
+    void ops([
+      { type: "present.set", active: !!state.meeting.presenting?.active, targetId: current.id },
+      { type: "estimation.update", id: current.id, phase },
+    ]);
   const phases: { key: EstimationItemDTO["phase"]; label: string }[] = [
     { key: "discuss", label: "Discuss" },
     { key: "estimate", label: "Estimate" },
@@ -232,8 +236,8 @@ function CardDeck({ item }: { item: EstimationItemDTO }) {
   const cards = state.meeting.deck?.cards ?? [];
   if (!state.me.canContribute) return null;
   return (
-    <div className="no-print flex justify-center overflow-x-auto border-t bg-background/80 px-4 pt-4 pb-3 backdrop-blur">
-      <div className="flex gap-1.5">
+    <div className="no-print overflow-x-auto border-t bg-background/80 px-4 pt-4 pb-3 backdrop-blur">
+      <div className="mx-auto flex w-max gap-1.5">
         {cards.map((c, i) => {
           const mine = item.myVote === c.label;
           return (

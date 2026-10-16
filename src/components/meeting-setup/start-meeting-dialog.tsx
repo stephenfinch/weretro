@@ -69,8 +69,15 @@ export function StartMeetingDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<MeetingType | null>(initialType ?? null);
-  const [stage, setStage] = useState<"type" | "pick" | "options">(initialType ? "pick" : "type");
-  const [draft, setDraft] = useState<MeetingDraft>(draftFor(initialType ?? "retrospective"));
+  const initialStage = (t?: MeetingType) => (t ? (t === "estimation" ? "options" : "pick") : "type") as "type" | "pick" | "options";
+  const initialDraft = (t?: MeetingType) => {
+    const d = draftFor(t ?? "retrospective");
+    if (t === "estimation") d.deckId = defaultDeckId ?? "scrum";
+    if (t === "healthCheck" && defaultHealthModelId) d.healthModelId = defaultHealthModelId;
+    return d;
+  };
+  const [stage, setStage] = useState<"type" | "pick" | "options">(initialStage(initialType));
+  const [draft, setDraft] = useState<MeetingDraft>(() => initialDraft(initialType));
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -78,8 +85,8 @@ export function StartMeetingDialog({
 
   const reset = () => {
     setType(initialType ?? null);
-    setStage(initialType ? "pick" : "type");
-    setDraft(draftFor(initialType ?? "retrospective"));
+    setStage(initialStage(initialType));
+    setDraft(initialDraft(initialType));
     setTemplateId(null);
   };
 
@@ -151,7 +158,7 @@ export function StartMeetingDialog({
       <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader className="border-b px-6 py-4">
           <div className="flex items-center gap-3">
-            {stage !== "type" && !(initialType && stage === "pick") && (
+            {stage !== "type" && !(initialType && stage === initialStage(initialType)) && (
               <Button variant="ghost" size="icon-sm" onClick={() => setStage(stage === "options" && type !== "estimation" ? "pick" : "type")} aria-label="Back">
                 <ArrowLeft />
               </Button>

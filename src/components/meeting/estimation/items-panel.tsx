@@ -17,7 +17,7 @@ export function EstimationItemsPanel() {
           <button
             type="button"
             disabled={!state.me.isFacilitator}
-            onClick={() => void op("present.set", { active: true, targetId: it.id })}
+            onClick={() => void op("present.set", { active: !!state.meeting.presenting?.active, targetId: it.id })}
             className={cn("flex w-full items-center gap-2 rounded-xl border p-2.5 text-left text-sm transition", current?.id === it.id ? "border-primary bg-primary/5" : "hover:bg-muted")}
           >
             <span className="w-5 text-xs text-muted-foreground">{i + 1}</span>

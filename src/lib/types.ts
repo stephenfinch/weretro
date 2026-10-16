@@ -99,6 +99,8 @@ export type MeetingOptions = {
   autoSyncEstimates?: boolean;
   estimationSort?: "original" | "lowToHigh" | "highToLow" | "mostMixed";
   standupShowFeedBeforeFinish?: boolean;
+  healthSummaries?: Record<string, string>;
+  guestToken?: string;
 };
 
 export type Topic = {

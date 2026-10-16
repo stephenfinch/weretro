@@ -30,7 +30,7 @@ import { WhiteboardDialog } from "./whiteboard-dialog";
 export function MeetingRoom({ initial, integrations, schedule, screen }: { initial: MeetingStateDTO; integrations: { id: string; type: string; name: string }[]; schedule: SeriesSchedule | null; screen?: boolean }) {
   const ctx = useMeetingSync(initial);
   const { state } = ctx;
-  const [panel, setPanel] = useState<PanelKey | null>(() => (initial.meeting.type === "estimation" ? "items" : null));
+  const [panel, setPanel] = useState<PanelKey | null>(null);
   const [customize, setCustomize] = useState(false);
   const [whiteboard, setWhiteboard] = useState<string | null>(null);
   const key = currentStepKey(state);

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { TOPIC_ICON_NAMES } from "@/lib/topic-icons";
 import { BUILTIN_DECKS, CHECK_QUESTIONS, PALETTE, STEP_INSTRUCTIONS, STEP_LABEL } from "@/lib/constants";
 import type { Anonymity, DeckCard, MeetingOptions, MeetingStep, MeetingType, SeriesSchedule, Topic } from "@/lib/types";
 
@@ -31,13 +32,7 @@ export type MeetingDraft = {
   invite?: boolean;
 };
 
-export const TOPIC_ICONS: IconName[] = [
-  "smile", "frown", "meh", "angry", "laugh", "heart", "thumbs-up", "thumbs-down", "lightbulb", "circle-help", "star", "sparkles",
-  "rocket", "anchor", "flag", "target", "trophy", "zap", "flame", "sun", "cloud-rain", "wind", "mountain", "sprout",
-  "flower", "gem", "puzzle", "book-open", "graduation-cap", "wrench", "shield-alert", "triangle-alert", "octagon", "play",
-  "repeat", "check", "plus", "minus", "chevrons-up", "chevrons-down", "trending-up", "trending-down", "users", "handshake",
-  "coffee", "message-circle", "eye", "compass", "telescope", "calendar", "clock", "list-checks", "circle-check", "circle-x",
-];
+export const TOPIC_ICONS = TOPIC_ICON_NAMES as unknown as IconName[];
 
 export function TopicIcon({ name, color, className }: { name?: string; color?: string; className?: string }) {
   return <DynamicIcon name={(name as IconName) || "circle"} className={className} style={{ color }} fallback={() => <span className={className} />} />;

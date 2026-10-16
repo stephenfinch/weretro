@@ -766,7 +766,7 @@ export async function applyOp(ctx: MeetingContext, op: Op): Promise<unknown> {
       const ids = active ? Array.from(new Set([...prevIds, ctx.participant!.id])) : [];
       await db
         .update(schema.meetings)
-        .set({ presenting: { active, targetId: active ? optStr(op.targetId, 64) ?? m.presenting?.targetId ?? null : null, participantIds: ids } })
+        .set({ presenting: { active, targetId: optStr(op.targetId, 64) ?? (active ? m.presenting?.targetId ?? null : null), participantIds: ids } })
         .where(eq(schema.meetings.id, m.id));
       return;
     }
