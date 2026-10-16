@@ -12,6 +12,7 @@ import { MEETING_TYPE_LABEL } from "@/lib/constants";
 import type { MeetingType } from "@/lib/types";
 import { START_PERMISSION } from "@/server/meetings/context";
 import { ListSearch } from "./list-search";
+import { startLikePrefill } from "@/server/team-data";
 
 const WELCOME: Record<MeetingType, string> = {
   retrospective: "Run focused, engaging retrospectives. Pick a template or create your own topics, decide how anonymous to be, brainstorm on your own, group similar ideas, dot-vote on what matters, then discuss and agree actions.",
@@ -20,10 +21,11 @@ const WELCOME: Record<MeetingType, string> = {
   estimation: "Run planning-poker style estimation. Import items from your task tool or add them by hand, estimate on your own, reveal together, and agree on the number.",
 };
 
-export async function MeetingTypePage({ access, type, q, demoHref }: { access: TeamAccess; type: MeetingType; q?: string; demoHref?: string }) {
+export async function MeetingTypePage({ access, type, q, demoHref, startLike }: { access: TeamAccess; type: MeetingType; q?: string; demoHref?: string; startLike?: string }) {
   const [open, closed, dialog] = await Promise.all([teamMeetings(access.team.id, type, { status: "open" }), teamMeetings(access.team.id, type, { status: "closed", q }), startDialogData(access)]);
   const label = MEETING_TYPE_LABEL[type];
   const canStart = access.can(START_PERMISSION[type]) && !access.team.archivedAt;
+  const prefill = startLike && canStart ? await startLikePrefill(access.team.id, type, startLike) : undefined;
   const byMonth = new Map<string, typeof closed>();
   for (const m of closed) {
     const k = format(parseISO(m.date), "MMMM yyyy");
@@ -41,6 +43,7 @@ export async function MeetingTypePage({ access, type, q, demoHref }: { access: T
             </Button>
           )}
           {canStart && <StartMeetingDialog {...dialog} initialType={type} trigger={<Button size="sm"><Plus /> Start {label.toLowerCase()}</Button>} />}
+          {prefill && <StartMeetingDialog key={startLike} {...dialog} initialType={type} prefill={prefill} defaultOpen trigger={null} />}
         </div>
       </div>
       {empty ? (

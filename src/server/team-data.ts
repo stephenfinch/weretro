@@ -2,7 +2,9 @@ import "server-only";
 import type { TeamAccess } from "./access";
 import { listHealthModels } from "./health-models";
 import { teamDecks, teamTemplates } from "./queries";
-import type { MeetingType } from "@/lib/types";
+import { and, eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+import type { Anonymity, MeetingType } from "@/lib/types";
 import { START_PERMISSION } from "./meetings/context";
 
 export async function startDialogData(access: TeamAccess) {
@@ -25,3 +27,24 @@ export async function startDialogData(access: TeamAccess) {
   };
 }
 export type StartDialogData = Awaited<ReturnType<typeof startDialogData>>;
+
+/** Settings of an earlier meeting, used to pre-fill "Start a meeting like this". */
+export async function startLikePrefill(teamId: string, type: MeetingType, meetingId: string) {
+  const [src] = await db
+    .select()
+    .from(schema.meetings)
+    .where(and(eq(schema.meetings.id, meetingId), eq(schema.meetings.teamId, teamId), eq(schema.meetings.type, type)))
+    .limit(1);
+  if (!src) return undefined;
+  return {
+    type,
+    title: src.title,
+    context: src.context,
+    anonymity: src.anonymity as Anonymity,
+    topics: src.topics,
+    steps: src.steps,
+    options: src.options,
+    healthModelId: src.healthModelId,
+    deckId: src.deck?.id ?? null,
+  };
+}

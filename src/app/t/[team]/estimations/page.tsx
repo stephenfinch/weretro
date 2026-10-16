@@ -9,5 +9,5 @@ export default async function Page({ params, searchParams }: PageProps<"/t/[team
   const user = await requireUser();
   const access = await getTeamAccess(user, team);
   if (!access) notFound();
-  return <MeetingTypePage access={access} type="estimation" q={typeof sp.q === "string" ? sp.q : undefined} demoHref={`/demo/estimation?team=${team}`} />;
+  return <MeetingTypePage access={access} type="estimation" q={typeof sp.q === "string" ? sp.q : undefined} startLike={typeof sp.startLike === "string" ? sp.startLike : undefined} demoHref={`/demo/estimation?team=${team}`} />;
 }

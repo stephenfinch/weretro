@@ -56,6 +56,8 @@ export function StartMeetingDialog({
   defaultHealthModelId,
   initialType,
   trigger,
+  prefill,
+  defaultOpen,
 }: {
   teamId: string;
   allowed: MeetingType[];
@@ -66,12 +68,16 @@ export function StartMeetingDialog({
   defaultHealthModelId?: string | null;
   initialType?: MeetingType;
   trigger?: React.ReactNode;
+  /** Pre-filled settings, e.g. from "Start a meeting like this". Opens straight on the options stage. */
+  prefill?: Partial<MeetingDraft>;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!defaultOpen);
   const [type, setType] = useState<MeetingType | null>(initialType ?? null);
-  const initialStage = (t?: MeetingType) => (t ? (t === "estimation" ? "options" : "pick") : "type") as "type" | "pick" | "options";
+  const initialStage = (t?: MeetingType) => (prefill ? "options" : t ? (t === "estimation" ? "options" : "pick") : "type") as "type" | "pick" | "options";
   const initialDraft = (t?: MeetingType) => {
     const d = draftFor(t ?? "retrospective");
+    if (prefill) return { ...d, ...prefill, date: d.date, schedule: null };
     if (t === "estimation") d.deckId = defaultDeckId ?? "scrum";
     if (t === "healthCheck" && defaultHealthModelId) d.healthModelId = defaultHealthModelId;
     return d;
@@ -148,13 +154,15 @@ export function StartMeetingDialog({
         if (!o) setTimeout(reset, 200);
       }}
     >
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button>
-            <Plus /> Start a meeting
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger !== null && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button>
+              <Plus /> Start a meeting
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader className="border-b px-6 py-4">
           <div className="flex items-center gap-3">

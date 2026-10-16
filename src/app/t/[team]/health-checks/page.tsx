@@ -42,7 +42,7 @@ export default async function HealthChecksPage({ params, searchParams }: PagePro
           </div>
         </div>
       )}
-      <MeetingTypePage access={access} type="healthCheck" q={typeof sp.q === "string" ? sp.q : undefined} demoHref={`/demo/healthCheck?team=${team}`} />
+      <MeetingTypePage access={access} type="healthCheck" q={typeof sp.q === "string" ? sp.q : undefined} startLike={typeof sp.startLike === "string" ? sp.startLike : undefined} demoHref={`/demo/healthCheck?team=${team}`} />
     </div>
   );
 }

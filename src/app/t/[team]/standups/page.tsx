@@ -6,7 +6,7 @@ import { CalendarClock, Plus, Sparkles } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/server/auth";
 import { getTeamAccess } from "@/server/access";
-import { startDialogData } from "@/server/team-data";
+import { startDialogData, startLikePrefill } from "@/server/team-data";
 import { teamMeetings } from "@/server/queries";
 import { StartMeetingDialog } from "@/components/meeting-setup/start-meeting-dialog";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,9 @@ function describe(s: SeriesSchedule | null) {
   return `${days} at ${s?.time ?? "09:00"} ${s?.timezone ?? ""}`;
 }
 
-export default async function StandupsPage({ params }: PageProps<"/t/[team]/standups">) {
+export default async function StandupsPage({ params, searchParams }: PageProps<"/t/[team]/standups">) {
   const { team: teamId } = await params;
+  const { startLike } = await searchParams;
   const user = await requireUser();
   const access = await getTeamAccess(user, teamId);
   if (!access) notFound();
@@ -35,6 +36,7 @@ export default async function StandupsPage({ params }: PageProps<"/t/[team]/stan
   const history = await teamMeetings(teamId, "standup", { limit: 60 });
   const dialog = await startDialogData(access);
   const canStart = access.can("startStandups") && !access.team.archivedAt;
+  const prefill = canStart && typeof startLike === "string" ? await startLikePrefill(teamId, "standup", startLike) : undefined;
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
       <div className="flex flex-wrap items-center gap-3">
@@ -44,6 +46,7 @@ export default async function StandupsPage({ params }: PageProps<"/t/[team]/stan
             <Link href={`/demo/standup?team=${teamId}`}><Sparkles /> Demo standup</Link>
           </Button>
           {canStart && <StartMeetingDialog {...dialog} initialType="standup" trigger={<Button size="sm"><Plus /> Create a standup series</Button>} />}
+          {prefill && <StartMeetingDialog key={String(startLike)} {...dialog} initialType="standup" prefill={prefill} defaultOpen trigger={null} />}
         </div>
       </div>
       {!series.length ? (

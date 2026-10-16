@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Copy, ExternalLink, Home, LogOut, Menu, Pencil, PlayCircle, RotateCcw, Save, Settings2, StopCircle, Trash2, UserCheck, Lock, WifiOff, LayoutGrid } from "lucide-react";
+import { ChevronDown, Copy, ExternalLink, Printer, Home, LogOut, Menu, Pencil, PlayCircle, RotateCcw, Save, Settings2, StopCircle, Trash2, UserCheck, Lock, WifiOff, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -159,6 +159,9 @@ export function MeetingTopBar({ onCustomize }: { onCustomize: () => void }) {
                   <Save /> Save as template…
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onSelect={() => window.open(`/m/${state.meeting.id}/report`, "_blank")}>
+                <Printer /> Printable report
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => router.push(`/t/${state.team.id}/${MEETING_TYPE_PATH[state.meeting.type]}?startLike=${state.meeting.id}`)}>
                 <Pencil /> Start new like this…
               </DropdownMenuItem>

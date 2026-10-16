@@ -87,7 +87,7 @@ export function ShareStep({ integrations }: { integrations?: { id: string; type:
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" className="w-56">
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Summary</DropdownMenuLabel>
-                <DropdownMenuItem asChild><a href={`/api/meetings/${state.meeting.id}/export?kind=summary&format=pdf`} target="_blank" rel="noreferrer">PDF</a></DropdownMenuItem>
+                <DropdownMenuItem asChild><a href={`/m/${state.meeting.id}/report?print=1`} target="_blank" rel="noreferrer">PDF</a></DropdownMenuItem>
                 <DropdownMenuItem asChild><a href={`/api/meetings/${state.meeting.id}/export?kind=summary&format=md`}>Markdown</a></DropdownMenuItem>
                 <DropdownMenuItem asChild><a href={`/api/meetings/${state.meeting.id}/export?kind=summaryWithComment&format=md`}>Summary with comments</a></DropdownMenuItem>
                 <DropdownMenuSeparator />
