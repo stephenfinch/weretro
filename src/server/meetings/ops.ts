@@ -1183,7 +1183,7 @@ export async function createActionItem(
       sourceType: input.sourceType ?? null,
       sourceId: input.sourceId ?? null,
       sourceText: input.sourceText ?? null,
-      sourceMeetingTitle: ctx.meeting.title || ctx.meeting.date,
+      sourceMeetingTitle: ctx.meeting.title || ctx.meeting.templateName || ctx.meeting.date,
       assigneeIds: input.assigneeIds ?? [],
       dueDate: input.dueDate ?? null,
       priority: input.priority ?? null,
