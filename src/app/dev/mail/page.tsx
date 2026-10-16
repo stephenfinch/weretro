@@ -4,6 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import { db, schema } from "@/db";
 
 export const metadata = { title: "Dev mailbox" };
+export const dynamic = "force-dynamic";
 
 // Development-only inbox: every email WeRetro sends is stored in email_outbox.
 export default async function DevMail({ searchParams }: PageProps<"/dev/mail">) {

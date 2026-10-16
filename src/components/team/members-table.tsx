@@ -79,7 +79,7 @@ export function MembersTable({ teamId, members, canManage, meId, orgPeople, canA
                   <td className="p-3">
                     {canManage ? (
                       <Select value={role} onValueChange={(v) => run(() => setMemberRole(teamId, m.userId, v as TeamRole), "Role updated")}>
-                        <SelectTrigger size="sm" className="w-32"><SelectValue /></SelectTrigger>
+                        <SelectTrigger size="sm" className="w-32"><SelectValue><span className="capitalize">{role}</span></SelectValue></SelectTrigger>
                         <SelectContent>
                           {(["admin", "member", "observer"] as TeamRole[]).map((r) => (
                             <SelectItem key={r} value={r}>

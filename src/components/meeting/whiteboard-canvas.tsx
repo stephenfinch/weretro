@@ -100,7 +100,7 @@ export default function WhiteboardCanvas({ id, readOnly, title }: { id: string; 
     <div className="relative h-full">
       <Excalidraw
         excalidrawAPI={(a: API) => (api.current = a)}
-        initialData={{ elements: initial.elements as never, files: (initial.files ?? {}) as never, appState: { viewBackgroundColor: resolvedTheme === "dark" ? "#1e1e2a" : "#ffffff" } }}
+        initialData={{ elements: initial.elements as never, files: (initial.files ?? {}) as never, appState: { viewBackgroundColor: "#ffffff" } }}
         onChange={onChange as never}
         viewModeEnabled={readOnly || locked}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
