@@ -82,6 +82,7 @@ export const sessions = pgTable(
     userId: text("user_id").notNull(),
     expiresAt: ts("expires_at").notNull(),
     userAgent: text("user_agent"),
+    ssoOrgId: text("sso_org_id"), // set when the session came from an organization's SAML sign-in
     createdAt: createdAt(),
   },
   (t) => [index("sessions_user_idx").on(t.userId)],

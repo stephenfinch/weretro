@@ -24,6 +24,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         New here? <Link href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">Create an account</Link>
       </p>
       <p className="text-center text-sm text-muted-foreground">
+        Company account? <Link href={`/sso${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">Sign in with SSO</Link>
+      </p>
+      <p className="text-center text-sm text-muted-foreground">
         Have an invitation code? <Link href="/join" className="font-medium text-primary hover:underline">Join a team</Link>
       </p>
     </div>

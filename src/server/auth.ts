@@ -51,11 +51,11 @@ export function initialsOf(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, opts: { ssoOrgId?: string } = {}) {
   const token = randomToken();
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400_000);
   const ua = (await headers()).get("user-agent") ?? null;
-  await db.insert(schema.sessions).values({ id: sha256(token), userId, expiresAt, userAgent: ua });
+  await db.insert(schema.sessions).values({ id: sha256(token), userId, expiresAt, userAgent: ua, ssoOrgId: opts.ssoOrgId ?? null });
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -94,6 +94,14 @@ export async function userFromToken(token: string | undefined | null): Promise<C
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const jar = await cookies();
   return userFromToken(jar.get(SESSION_COOKIE)?.value);
+});
+
+/** Organization whose SAML sign-in created the current session, if any. */
+export const currentSessionSsoOrg = cache(async (): Promise<string | null> => {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const [row] = await db.select({ ssoOrgId: schema.sessions.ssoOrgId }).from(schema.sessions).where(eq(schema.sessions.id, sha256(token))).limit(1);
+  return row?.ssoOrgId ?? null;
 });
 
 export async function requireUser(next?: string): Promise<CurrentUser> {

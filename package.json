@@ -20,6 +20,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@excalidraw/excalidraw": "^0.18.1",
     "@neondatabase/serverless": "^1.2.0",
+    "@node-saml/node-saml": "5.1.0",
     "arctic": "^3.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -15,6 +15,16 @@ async function guardIp(org: Org) {
   if (!ipAllowed(await currentIp(), org.settings.allowedIpRanges)) redirect(`/blocked?org=${encodeURIComponent(org.name)}`);
 }
 
+/** Organizations can require members (not owners) to sign in through their identity provider. */
+async function guardSso(org: Org, orgUser: OrgUser) {
+  const sso = org.settings?.sso;
+  if (!sso?.required || !sso.enabled || !sso.entryPoint || !sso.idpCert) return;
+  if (orgUser.roles.includes("owner")) return;
+  const { currentSessionSsoOrg } = await import("./auth");
+  if ((await currentSessionSsoOrg()) === org.id) return;
+  redirect(`/sso/${org.slug}`);
+}
+
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -56,6 +66,7 @@ export const getOrgAccess = cache(async (user: CurrentUser, orgIdOrSlug: string)
   const orgUser = await getOrgUser(org.id, user.id);
   if (!orgUser || !orgUser.active) return null;
   await guardIp(org);
+  await guardSso(org, orgUser);
   return {
     org,
     orgUser,
@@ -88,6 +99,7 @@ export const getTeamAccess = cache(async (user: CurrentUser, teamId: string): Pr
   const [org] = await db.select().from(schema.organizations).where(eq(schema.organizations.id, team.orgId)).limit(1);
   const orgUser = await getOrgUser(team.orgId, user.id);
   if (org) await guardIp(org);
+  if (org && orgUser) await guardSso(org, orgUser);
   const memberRows = await db
     .select()
     .from(schema.members)
