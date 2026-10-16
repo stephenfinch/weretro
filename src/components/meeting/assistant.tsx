@@ -35,7 +35,9 @@ export function AssistantPanel() {
       .then((r) => r.json())
       .then((j) => setLines(j.messages ?? []));
   }, [id]);
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [lines.length, busy]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [lines.length, busy]);
   const key = currentStepKey(state);
   const prompts = PROMPTS[`${state.meeting.type}:${key}`] ?? PROMPTS[`${state.meeting.type}:default`] ?? [];
   const send = async (msg: string) => {

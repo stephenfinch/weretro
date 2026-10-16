@@ -458,7 +458,9 @@ function WhiteboardsPanel({ onOpen }: { onOpen: (id: string) => void }) {
 function ChatPanel() {
   const { state } = useMeeting();
   const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [state.chat.length]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [state.chat.length]);
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">Chat with your team. Messages aren&apos;t included in meeting reports. Chat is not anonymous.</p>
