@@ -139,6 +139,7 @@ export const orgUsers = pgTable(
     joinedAt: ts("joined_at"),
     active: boolean("active").notNull().default(true),
     provisionedBy: text("provisioned_by"), // "scim" when created by SCIM
+    scimRoles: text("scim_roles").array().notNull().default(sql`ARRAY[]::text[]`), // roles granted through SCIM groups
     notificationPreferences: jsonb("notification_preferences")
       .$type<NotificationPreferences>()
       .notNull()
@@ -184,6 +185,7 @@ export const members = pgTable(
     roles: text("roles").array().notNull().default(sql`ARRAY['member']::text[]`),
     reminders: text("reminders").notNull().default("assignedToMe"),
     tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
+    scimRoles: text("scim_roles").array().notNull().default(sql`ARRAY[]::text[]`), // team roles granted through SCIM groups
     addedById: text("added_by_id"),
     invitedAt: ts("invited_at"),
     joinedAt: ts("joined_at"),
