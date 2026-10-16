@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { mediaUrl, toActionDTO } from "./meetings/state";
+import { mediaUrl, toActionDTO, avatarUrl } from "./meetings/state";
 import type { ActionDTO } from "@/lib/meeting-types";
 
 export async function userTeams(userId: string, orgId?: string) {
@@ -13,7 +13,7 @@ export async function userTeams(userId: string, orgId?: string) {
     .orderBy(asc(schema.teams.name));
 }
 
-export async function teamMembers(teamId: string) {
+export async function teamMembers(teamId: string, gravatar = false) {
   const rows = await db
     .select({ m: schema.members, u: schema.users })
     .from(schema.members)
@@ -27,7 +27,7 @@ export async function teamMembers(teamId: string) {
     email: u.email,
     color: u.color,
     initials: u.initials,
-    avatarUrl: mediaUrl(u.avatarMediaId),
+    avatarUrl: avatarUrl(u, gravatar),
     roles: m.roles,
     invited: !m.joinedAt,
     lastSeenAt: (m.lastSeenAt ?? u.lastSeenAt)?.toISOString() ?? null,
@@ -174,7 +174,7 @@ export async function teamDecks(orgId: string, teamId: string) {
     .orderBy(asc(schema.estimationDecks.name));
 }
 
-export async function orgUsers(orgId: string) {
+export async function orgUsers(orgId: string, gravatar = false) {
   const rows = await db
     .select({ ou: schema.orgUsers, u: schema.users })
     .from(schema.orgUsers)
@@ -192,7 +192,7 @@ export async function orgUsers(orgId: string) {
     name: u.name,
     email: u.email,
     color: u.color,
-    avatarUrl: mediaUrl(u.avatarMediaId),
+    avatarUrl: avatarUrl(u, gravatar),
     roles: ou.roles,
     active: ou.active,
     invited: !ou.joinedAt,

@@ -3,6 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod/v4";
 import { HttpError } from "./access";
+import { aiFlags } from "@/lib/org-features";
+import type { AiFeature, OrgSettings } from "@/lib/types";
 
 /**
  * All AI features call Claude through the official Anthropic SDK. They are optional:
@@ -17,8 +19,18 @@ export function aiClient() {
   return client;
 }
 
-export function aiEnabledFor(org: { settings?: { aiEnabled?: boolean } | null }) {
+export function aiEnabledFor(org: { settings?: OrgSettings | null }) {
   return !!process.env.ANTHROPIC_API_KEY && org.settings?.aiEnabled !== false;
+}
+
+/** Is one AI feature available for this organization? */
+export function aiFeature(org: { settings?: OrgSettings | null }, key: AiFeature) {
+  return aiFlags(org.settings, !!process.env.ANTHROPIC_API_KEY)[key];
+}
+
+export function assertAiFeature(org: { settings?: OrgSettings | null }, key: AiFeature) {
+  if (!process.env.ANTHROPIC_API_KEY) throw new HttpError(503, "AI features aren't configured. Set ANTHROPIC_API_KEY to enable them.");
+  if (!aiFeature(org, key)) throw new HttpError(403, "This AI feature is turned off for your organization");
 }
 
 /** Server-side refusal fallback is only valid on the models that support it. */

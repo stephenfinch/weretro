@@ -11,7 +11,7 @@ export default async function MembersPage({ params }: PageProps<"/t/[team]/membe
   const user = await requireUser();
   const access = await getTeamAccess(user, teamId);
   if (!access) notFound();
-  const members = await teamMembers(teamId);
+  const members = await teamMembers(teamId, !!access.org.settings.gravatar);
   const requests = access.isAdmin ? await pendingRequests(access.org.id, teamId) : [];
   const orgPeople = access.can("addTeamMembers") ? (await orgUsers(access.org.id)).filter((u) => u.active && !members.some((m) => m.userId === u.userId)).map((u) => ({ userId: u.userId, name: u.name, email: u.email })) : [];
   return (

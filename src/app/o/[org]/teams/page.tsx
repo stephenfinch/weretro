@@ -23,7 +23,8 @@ export default async function OrgTeamsPage({ params }: PageProps<"/o/[org]/teams
     .from(schema.userRequests)
     .where(and(eq(schema.userRequests.orgId, org.id), eq(schema.userRequests.userId, user.id), eq(schema.userRequests.status, "pending")));
   const transparency = !!org.settings.teamTransparency;
-  const rows = teams.map((t) => {
+  const fullList = access.isAdmin || access.canInsights || org.settings.revealTeamList !== false;
+  const rows = teams.filter((t) => fullList || mine.some((m) => m.teamId === t.id)).map((t) => {
     const m = mine.find((x) => x.teamId === t.id);
     const myRole = m ? (m.roles.includes("admin") ? "admin" : m.roles.includes("member") ? "member" : "observer") : null;
     return {

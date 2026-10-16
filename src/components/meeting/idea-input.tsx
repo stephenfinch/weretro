@@ -60,10 +60,10 @@ export function IdeaInput({ topicId, color, onWhiteboard }: { topicId: string; c
           <EmojiPicker onPick={(e) => setText((t) => t + e)} align="end" />
           <AttachMenu
             onAttach={(a) => setAttachments((x) => [...x, a])}
-            onPoll={() => setPoll(true)}
-            onKudos={state.meeting.options.kudos !== false ? () => setKudos(true) : undefined}
+            onPoll={state.team.attachments.polls ? () => setPoll(true) : undefined}
+            onKudos={state.meeting.options.kudos !== false && state.team.attachments.kudos ? () => setKudos(true) : undefined}
             onWhiteboard={
-              onWhiteboard
+              onWhiteboard && state.team.attachments.whiteboards
                 ? async () => {
                     const r = await op("whiteboard.create", { title: text.trim() || "Idea whiteboard", attachedType: "meeting" });
                     const id = (r.result as { id?: string } | undefined)?.id;

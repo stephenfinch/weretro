@@ -178,6 +178,54 @@ export type OrgSettings = {
   defaultHealthModelId?: string | null;
   allowGuests?: boolean;
   allowedIpRanges?: string[];
+  /** When false, regular users only see teams they belong to. */
+  revealTeamList?: boolean;
+  /** Team roles allowed to share templates with other teams (default: admin). */
+  templateSharingRoles?: TeamRole[];
+  /** Per-feature AI switches; missing keys use the feature's default. */
+  ai?: Partial<Record<AiFeature, boolean>>;
+  /** Which attachment kinds participants may add to ideas and comments. */
+  attachments?: Partial<Record<AttachmentKind, boolean>>;
+  gravatar?: boolean;
+  /** Users may connect MCP clients / apps on their behalf via OAuth. */
+  connectedApps?: boolean;
+  sso?: SsoSettings;
+  scim?: ScimSettings;
+};
+
+export type AiFeature =
+  | "assistant"
+  | "suggestGroups"
+  | "groupTitles"
+  | "suggestActions"
+  | "summaries"
+  | "autoRetroSummary"
+  | "autoHealthSummary"
+  | "insights"
+  | "generateTemplates"
+  | "generateHealthModels"
+  | "icebreakerQuestions";
+
+export type AttachmentKind = "polls" | "kudos" | "images" | "gifs" | "whiteboards";
+
+export type SsoSettings = {
+  enabled?: boolean;
+  /** Members (not owners) must sign in through the identity provider. */
+  required?: boolean;
+  entryPoint?: string;
+  idpIssuer?: string;
+  idpCert?: string;
+  emailAttribute?: string;
+  nameAttribute?: string;
+};
+
+export type ScimSettings = {
+  ownersGroup?: string;
+  adminsGroup?: string;
+  /** Group name pattern with {team}, eg. "WeRetro-{team}-Admins". */
+  teamAdminsPattern?: string;
+  teamMembersPattern?: string;
+  allowDeactivation?: boolean;
 };
 
 export type TeamPermissionKey =

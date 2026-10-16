@@ -34,6 +34,8 @@ export async function authenticate(req: Request): Promise<Principal> {
   const [org] = await db.select().from(schema.organizations).where(eq(schema.organizations.id, key.orgId)).limit(1);
   if (!org) throw new HttpError(401, "Organization not found");
   if (key.teamId && org.settings.teamApiKeys === false) throw new HttpError(403, "Team API keys are disabled for this organization");
+  const { assertIpAllowed, ipFromHeaders } = await import("../ip");
+  await assertIpAllowed(org, ipFromHeaders(req.headers));
   const [user] = key.createdById ? await db.select().from(schema.users).where(eq(schema.users.id, key.createdById)).limit(1) : [];
   if (!user) throw new HttpError(401, "The user who created this key no longer exists");
   if (!key.lastUsedAt || Date.now() - key.lastUsedAt.getTime() > 60_000) {

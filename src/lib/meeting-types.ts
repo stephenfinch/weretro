@@ -1,3 +1,4 @@
+import type { AiFlags, AttachmentFlags } from "./org-features";
 import type {
   Anonymity,
   Attachment,
@@ -270,7 +271,7 @@ export type MeetingStateDTO = {
     closedAt: string | null;
     isDemo: boolean;
   };
-  team: { id: string; name: string; color: string; orgId: string; orgSlug: string; logoUrl: string | null; aiEnabled: boolean };
+  team: { id: string; name: string; color: string; orgId: string; orgSlug: string; logoUrl: string | null; aiEnabled: boolean; ai: AiFlags; attachments: AttachmentFlags };
   me: {
     participantId: string | null;
     userId: string;

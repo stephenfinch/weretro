@@ -137,6 +137,7 @@ export const orgUsers = pgTable(
     invitedAt: ts("invited_at"),
     joinedAt: ts("joined_at"),
     active: boolean("active").notNull().default(true),
+    provisionedBy: text("provisioned_by"), // "scim" when created by SCIM
     notificationPreferences: jsonb("notification_preferences")
       .$type<NotificationPreferences>()
       .notNull()
@@ -753,3 +754,58 @@ export const notificationsSent = pgTable("notifications_sent", {
   key: text("key").notNull().unique(),
   createdAt: createdAt(),
 });
+
+// ─── OAuth for connected apps (MCP clients) ─────────────────────────────────
+
+export const oauthClients = pgTable("oauth_clients", {
+  id: id(),
+  name: text("name").notNull().default("App"),
+  redirectUris: text("redirect_uris").array().notNull(),
+  createdAt: createdAt(),
+});
+
+export const oauthCodes = pgTable("oauth_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  clientId: text("client_id").notNull(),
+  userId: text("user_id").notNull(),
+  orgId: text("org_id").notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  scope: text("scope").notNull().default("read write"),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+});
+
+export const oauthGrants = pgTable(
+  "oauth_grants",
+  {
+    id: id(),
+    clientId: text("client_id").notNull(),
+    userId: text("user_id").notNull(),
+    orgId: text("org_id").notNull(),
+    scope: text("scope").notNull().default("read write"),
+    accessTokenHash: text("access_token_hash").notNull().unique(),
+    refreshTokenHash: text("refresh_token_hash").unique(),
+    accessExpiresAt: ts("access_expires_at").notNull(),
+    lastUsedAt: ts("last_used_at"),
+    revokedAt: ts("revoked_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("oauth_grants_org_idx").on(t.orgId)],
+);
+
+// ─── SCIM groups ────────────────────────────────────────────────────────────
+
+export const scimGroups = pgTable(
+  "scim_groups",
+  {
+    id: id(),
+    orgId: text("org_id").notNull(),
+    displayName: text("display_name").notNull(),
+    externalId: text("external_id"),
+    memberIds: text("member_ids").array().notNull().default(sql`ARRAY[]::text[]`),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("scim_groups_org_idx").on(t.orgId)],
+);

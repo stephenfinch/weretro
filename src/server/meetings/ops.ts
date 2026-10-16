@@ -1,4 +1,6 @@
 import "server-only";
+import { attachmentFlags, attachmentKindOf } from "@/lib/org-features";
+import type { AttachmentKind } from "@/lib/types";
 import { and, eq, inArray, isNull, max, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { HttpError } from "../access";
@@ -67,6 +69,19 @@ function isFacilitating(ctx: MeetingContext) {
 
 function ensureOpen(ctx: MeetingContext) {
   if (ctx.meeting.status === "closed") throw new HttpError(400, "This meeting is closed");
+}
+
+/** Drop attachment kinds the organization has switched off. */
+function allowedAttachments(ctx: MeetingContext, input: unknown): Attachment[] {
+  const flags = attachmentFlags(ctx.org.settings);
+  return (Array.isArray(input) ? (input as Attachment[]) : []).filter((a) => {
+    const kind = attachmentKindOf(String(a?.type ?? ""));
+    return !kind || flags[kind];
+  });
+}
+
+function assertAttachment(ctx: MeetingContext, kind: AttachmentKind) {
+  if (!attachmentFlags(ctx.org.settings)[kind]) throw new HttpError(403, "Your organization has turned this off");
 }
 
 function ensureContributor(ctx: MeetingContext): Participant {
@@ -187,7 +202,7 @@ export async function applyOp(ctx: MeetingContext, op: Op): Promise<unknown> {
       const p = ensureContributor(ctx);
       const topicId = str(op.topicId, 64, true);
       if (!m.topics.some((t) => t.id === topicId)) throw new HttpError(400, "Unknown topic");
-      const attachments = (Array.isArray(op.attachments) ? op.attachments : []) as Attachment[];
+      const attachments = allowedAttachments(ctx, op.attachments);
       const text = str(op.text, 2000);
       if (!text && !attachments.length) throw new HttpError(400, "Text is required");
       const anonymous = bool(op.anonymous) && !!m.options.allowAnonymousContributions;
@@ -214,7 +229,7 @@ export async function applyOp(ctx: MeetingContext, op: Op): Promise<unknown> {
       const patch: Partial<typeof schema.ideas.$inferInsert> = { updatedAt: new Date() };
       if (op.text !== undefined) patch.text = str(op.text, 2000);
       if (op.color !== undefined) patch.color = optStr(op.color, 16) || null;
-      if (op.attachments !== undefined) patch.attachments = op.attachments as Attachment[];
+      if (op.attachments !== undefined) patch.attachments = allowedAttachments(ctx, op.attachments);
       if (op.topicId !== undefined && m.topics.some((t) => t.id === op.topicId)) {
         patch.topicId = String(op.topicId);
         if (idea.groupId) {
@@ -456,7 +471,7 @@ export async function applyOp(ctx: MeetingContext, op: Op): Promise<unknown> {
         throw new HttpError(403, "Comments are turned off");
       }
       const text = str(op.text, 4000);
-      const attachments = (Array.isArray(op.attachments) ? op.attachments : []) as Attachment[];
+      const attachments = allowedAttachments(ctx, op.attachments);
       if (!text && !attachments.length) throw new HttpError(400, "Text is required");
       const [c] = await db
         .insert(schema.comments)
@@ -561,6 +576,7 @@ export async function applyOp(ctx: MeetingContext, op: Op): Promise<unknown> {
     // ── Polls ─────────────────────────────────────────────────────────────
     case "poll.create": {
       const p = ensureContributor(ctx);
+      assertAttachment(ctx, "polls");
       const options = (Array.isArray(op.options) ? op.options : [])
         .map((o) => String(o).trim())
         .filter(Boolean)
@@ -620,6 +636,7 @@ export async function applyOp(ctx: MeetingContext, op: Op): Promise<unknown> {
     // ── Kudos ─────────────────────────────────────────────────────────────
     case "kudos.give": {
       ensureMember(ctx);
+      assertAttachment(ctx, "kudos");
       if (m.options.kudos === false) throw new HttpError(403, "Kudos are turned off");
       const toUserId = str(op.toUserId, 64, true);
       const [k] = await db
@@ -1040,6 +1057,7 @@ export async function applyOp(ctx: MeetingContext, op: Op): Promise<unknown> {
     // ── Whiteboards ───────────────────────────────────────────────────────
     case "whiteboard.create": {
       ensureMember(ctx);
+      assertAttachment(ctx, "whiteboards");
       if ((m.options.whiteboards ?? "everyone") === "facilitators" && !isFacilitating(ctx)) throw new HttpError(403, "Only facilitators can create whiteboards");
       const [w] = await db
         .insert(schema.whiteboards)

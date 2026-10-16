@@ -3,7 +3,7 @@ import { requireUser } from "@/server/auth";
 import { getTeamAccess } from "@/server/access";
 import { loadInsights } from "@/server/insights-page";
 import { InsightsView } from "@/components/insights/insights-view";
-import { aiEnabledFor } from "@/server/ai";
+import { aiFeature } from "@/server/ai";
 
 export default async function TeamInsights({ params, searchParams }: PageProps<"/t/[team]/insights">) {
   const { team } = await params;
@@ -14,7 +14,7 @@ export default async function TeamInsights({ params, searchParams }: PageProps<"
   const { data, health, range } = await loadInsights(ids, await searchParams);
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <InsightsView data={data} health={health} range={range} scope={access.team.isProgram ? "org" : "team"} exportBase={`/api/insights/team/${team}`} aiEnabled={aiEnabledFor(access.org)} />
+      <InsightsView data={data} health={health} range={range} scope={access.team.isProgram ? "org" : "team"} exportBase={`/api/insights/team/${team}`} aiEnabled={aiFeature(access.org, "insights")} />
     </div>
   );
 }

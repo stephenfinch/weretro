@@ -97,7 +97,7 @@ export function TemplateEditor({
             }}
             onAi={async (prompt) => {
               setBusy(true);
-              const res = await fetch("/api/ai/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "template", prompt, meetingType }) });
+              const res = await fetch("/api/ai/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "template", prompt, meetingType, orgId }) });
               const json = await res.json();
               setBusy(false);
               if (!res.ok) return void toast.error(json.error);
@@ -207,7 +207,7 @@ export function HealthModelEditor({
             onCopy={(id) => void load(id, true)}
             onAi={async (prompt) => {
               setBusy(true);
-              const res = await fetch("/api/ai/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "healthModel", prompt }) });
+              const res = await fetch("/api/ai/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "healthModel", prompt, orgId }) });
               const json = await res.json();
               setBusy(false);
               if (!res.ok) return void toast.error(json.error);

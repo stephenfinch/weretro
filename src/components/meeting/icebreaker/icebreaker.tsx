@@ -199,7 +199,7 @@ function QuestionMode() {
             <Input value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Add your icebreaker question…" />
             <Button type="submit" variant="outline">Use</Button>
           </form>
-          {state.team.aiEnabled && (
+          {state.team.ai.icebreakerQuestions && (
             <div className="mx-auto max-w-lg space-y-2 rounded-2xl border p-4 text-left">
               <p className="flex items-center gap-2 text-sm font-medium"><Sparkles className="size-4 text-primary" /> AI icebreakers</p>
               <form
@@ -207,7 +207,7 @@ function QuestionMode() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   setBusy(true);
-                  const res = await fetch("/api/ai/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "icebreaker", prompt: theme || "team building" }) });
+                  const res = await fetch("/api/ai/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: "icebreaker", prompt: theme || "team building", orgId: state.team.orgId }) });
                   const json = await res.json();
                   setBusy(false);
                   if (!res.ok) return void toast.error(json.error);

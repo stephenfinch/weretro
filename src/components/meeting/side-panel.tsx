@@ -64,7 +64,7 @@ export function SidePanel({ panel, setPanel, onOpenWhiteboard }: { panel: PanelK
     { key: "kudos", icon: Gift, label: "Kudos", badge: state.kudos.length, hidden: state.meeting.options.kudos === false },
     { key: "whiteboards", icon: PenTool, label: "Whiteboards", badge: state.whiteboards.length },
     { key: "chat", icon: MessageCircle, label: "Chat", badge: unread, hidden: state.meeting.options.chat === "disabled" },
-    { key: "assistant", icon: Bot, label: "AI assistant", hidden: !state.team.aiEnabled || state.me.isGuest },
+    { key: "assistant", icon: Bot, label: "AI assistant", hidden: !state.team.ai.assistant || state.me.isGuest },
   ];
   return (
     <div className="no-print flex h-full shrink-0">

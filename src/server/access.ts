@@ -7,6 +7,14 @@ import { DEFAULT_PERMISSIONS } from "@/lib/constants";
 import type { TeamPermissionKey, TeamRole } from "@/lib/types";
 import { getCurrentUser, type CurrentUser } from "./auth";
 
+/** Organizations can restrict access to certain IP ranges. */
+async function guardIp(org: Org) {
+  if (!org.settings?.allowedIpRanges?.length) return;
+  const { currentIp } = await import("./ip");
+  const { ipAllowed } = await import("@/lib/ip");
+  if (!ipAllowed(await currentIp(), org.settings.allowedIpRanges)) redirect(`/blocked?org=${encodeURIComponent(org.name)}`);
+}
+
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -47,6 +55,7 @@ export const getOrgAccess = cache(async (user: CurrentUser, orgIdOrSlug: string)
   if (!org) return null;
   const orgUser = await getOrgUser(org.id, user.id);
   if (!orgUser || !orgUser.active) return null;
+  await guardIp(org);
   return {
     org,
     orgUser,
@@ -78,6 +87,7 @@ export const getTeamAccess = cache(async (user: CurrentUser, teamId: string): Pr
   if (!team) return null;
   const [org] = await db.select().from(schema.organizations).where(eq(schema.organizations.id, team.orgId)).limit(1);
   const orgUser = await getOrgUser(team.orgId, user.id);
+  if (org) await guardIp(org);
   const memberRows = await db
     .select()
     .from(schema.members)

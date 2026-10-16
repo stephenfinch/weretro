@@ -231,14 +231,14 @@ export function MeetingReport({ printable }: { printable?: boolean }) {
             <div className="mb-1 flex items-center gap-2">
               <Sparkles className="size-4 text-violet-500" />
               <h3 className="text-sm font-semibold">AI summary</h3>
-              {state.team.aiEnabled && state.me.canFacilitate && !printable && (
+              {state.team.ai.summaries && state.me.canFacilitate && !printable && (
                 <button type="button" onClick={generate} className="ml-auto text-xs text-primary">{generating ? "Refreshing…" : "Refresh summary"}</button>
               )}
             </div>
             <div className="text-sm whitespace-pre-wrap">{state.meeting.aiSummary}</div>
           </div>
         ) : (
-          state.team.aiEnabled && state.me.canFacilitate && !printable && (
+          state.team.ai.summaries && state.me.canFacilitate && !printable && (
             <Button variant="outline" size="sm" onClick={generate} disabled={generating}>
               {generating ? <Loader2 className="animate-spin" /> : <Sparkles />} Generate summary
             </Button>

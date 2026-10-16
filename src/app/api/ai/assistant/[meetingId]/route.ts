@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/server/auth";
 import { askAssistant, loadConversation, resetConversation, transcript } from "@/server/assistant";
 import { loadMeetingContext } from "@/server/meetings/context";
-import { aiEnabledFor } from "@/server/ai";
+import { assertAiFeature } from "@/server/ai";
 import { HttpError } from "@/server/access";
 import { jsonError, unauthorized } from "@/server/http";
 
@@ -12,7 +12,7 @@ async function guard(meetingId: string) {
   const user = await getCurrentUser();
   if (!user || user.isGuest) throw new HttpError(401, "Not signed in");
   const ctx = await loadMeetingContext(meetingId, user);
-  if (!aiEnabledFor(ctx.org)) throw new HttpError(503, "The AI assistant isn't available on this account");
+  assertAiFeature(ctx.org, "assistant");
   return user;
 }
 

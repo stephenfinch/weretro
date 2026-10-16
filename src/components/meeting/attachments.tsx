@@ -1,5 +1,7 @@
 "use client";
 
+import { useMeeting } from "./use-meeting";
+
 import { useRef, useState } from "react";
 import { BarChart3, Gift, ImagePlus, Loader2, Paperclip, PenTool, Search, Sticker } from "lucide-react";
 import { toast } from "sonner";
@@ -52,10 +54,13 @@ export function AttachMenu({
   onKudos?: () => void;
   onWhiteboard?: () => void;
 }) {
+  const { state } = useMeeting();
+  const allow = state.team.attachments;
   const [open, setOpen] = useState(false);
   const [gif, setGif] = useState(false);
   const [busy, setBusy] = useState(false);
   const file = useRef<HTMLInputElement>(null);
+  if (!allow.images && !allow.gifs && !onPoll && !onKudos && !onWhiteboard) return null;
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
@@ -65,8 +70,8 @@ export function AttachMenu({
           </button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-52 p-1">
-          <MenuButton icon={ImagePlus} label="Upload image" onClick={() => { setOpen(false); file.current?.click(); }} />
-          <MenuButton icon={Sticker} label="GIF" onClick={() => { setOpen(false); setGif(true); }} />
+          {allow.images && <MenuButton icon={ImagePlus} label="Upload image" onClick={() => { setOpen(false); file.current?.click(); }} />}
+          {allow.gifs && <MenuButton icon={Sticker} label="GIF" onClick={() => { setOpen(false); setGif(true); }} />}
           {onPoll && <MenuButton icon={BarChart3} label="Poll" onClick={() => { setOpen(false); onPoll(); }} />}
           {onKudos && <MenuButton icon={Gift} label="Kudos" onClick={() => { setOpen(false); onKudos(); }} />}
           {onWhiteboard && <MenuButton icon={PenTool} label="Whiteboard" onClick={() => { setOpen(false); onWhiteboard(); }} />}

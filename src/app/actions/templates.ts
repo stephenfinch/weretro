@@ -92,7 +92,15 @@ export async function updateTemplateScope(id: string, patch: { sharedWithOtherTe
       const org = await getOrgAccess(user, t.orgId!);
       if (!org?.isAdmin) throw new HttpError(403, "Only organization admins can move templates to the account");
       await db.update(schema.templates).set({ teamId: null }).where(eq(schema.templates.id, id));
-    } else if (patch.sharedWithOtherTeams !== undefined) await db.update(schema.templates).set({ sharedWithOtherTeams: patch.sharedWithOtherTeams }).where(eq(schema.templates.id, id));
+    } else if (patch.sharedWithOtherTeams !== undefined) {
+      if (t.teamId) {
+        const access = await assertTeamAccess(user, t.teamId);
+        const roles = access.org.settings.templateSharingRoles ?? ["admin"];
+        const orgAdmin = !!access.orgUser && (access.orgUser.roles.includes("admin") || access.orgUser.roles.includes("owner"));
+        if (!orgAdmin && !access.roles.some((r) => roles.includes(r))) throw new HttpError(403, "Your role can't share templates with other teams");
+      }
+      await db.update(schema.templates).set({ sharedWithOtherTeams: patch.sharedWithOtherTeams }).where(eq(schema.templates.id, id));
+    }
     revalidatePath("/", "layout");
   });
 }

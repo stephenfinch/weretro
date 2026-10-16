@@ -24,11 +24,10 @@ export function UserAvatar({
       className={cn("relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white select-none", ring && "ring-2 ring-background", className)}
       style={{ width: size, height: size, background: color ?? "#94A3B8", fontSize: Math.max(9, size * 0.38) }}
     >
-      {src ? (
+      {label}
+      {src && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={name ?? ""} className="size-full object-cover" />
-      ) : (
-        label
+        <img src={src} alt={name ?? ""} className="absolute inset-0 size-full object-cover" />
       )}
     </span>
   );

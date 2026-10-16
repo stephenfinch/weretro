@@ -42,6 +42,21 @@ export async function suggestGroups(ctx: MeetingContext) {
   return { message: created ? `${created} suggested ${created === 1 ? "group" : "groups"}` : "No groups to suggest" };
 }
 
+/** Suggest a short title for a group from the ideas in it, and apply it. */
+export async function suggestGroupTitle(ctx: MeetingContext, groupId: string) {
+  const ideas = await db.select().from(schema.ideas).where(and(eq(schema.ideas.meetingId, ctx.meeting.id), eq(schema.ideas.groupId, groupId)));
+  if (!ideas.length) throw new HttpError(400, "This group has no ideas yet");
+  const topic = ctx.meeting.topics.find((t) => t.id === ideas[0].topicId);
+  const result = await aiJson(
+    z.object({ title: z.string().describe("Short theme title, 2-6 words, no trailing punctuation") }),
+    `You name clusters of retrospective sticky notes. Reply with a short, specific title that captures what the notes have in common. ${SAFE}`,
+    `<data>\nTopic: ${topic?.title ?? ""}\n${ideas.map((i) => `- ${i.text.replace(/\n/g, " ")}`).join("\n")}\n</data>`,
+  );
+  const title = result.title.trim().slice(0, 120);
+  await applyOp(ctx, { type: "group.update", id: groupId, title });
+  return { title };
+}
+
 export async function suggestActions(ctx: MeetingContext, viewer: CurrentUser) {
   const state = await buildMeetingState(ctx, viewer);
   const { markdown } = stateToMarkdown(state, { withComments: true });

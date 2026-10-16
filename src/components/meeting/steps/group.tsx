@@ -14,7 +14,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Check, ChevronDown, ChevronRight, Copy, GripVertical, ListChecks, MoreHorizontal, ParkingSquare, Trash2, Ungroup, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Copy, GripVertical, ListChecks, Loader2, MoreHorizontal, ParkingSquare, Sparkles, Trash2, Ungroup, X } from "lucide-react";
 import { toast } from "sonner";
 import type { GroupDTO, IdeaDTO } from "@/lib/meeting-types";
 import { cn } from "@/lib/utils";
@@ -144,6 +144,7 @@ function GroupBox({ group, ideas, canGroup }: { group: GroupDTO; ideas: IdeaDTO[
   const [title, setTitle] = useState(group.title);
   const [editing, setEditing] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [naming, setNaming] = useState(false);
   const drag = useDraggable({ id: `group:${group.id}`, disabled: !canGroup });
   const drop = useDroppable({ id: `drop-group:${group.id}`, disabled: !canGroup });
   const colorOf = useIdeaColor();
@@ -181,8 +182,29 @@ function GroupBox({ group, ideas, canGroup }: { group: GroupDTO; ideas: IdeaDTO[
             className="min-w-0 flex-1 rounded-md bg-background/70 px-2 py-0.5 text-sm font-semibold outline-none"
           />
         ) : (
-          <button type="button" disabled={!canGroup} onClick={() => setEditing(true)} className={cn("min-w-0 flex-1 truncate text-left text-sm font-semibold", !group.title && "text-muted-foreground italic")}>
+          <button type="button" disabled={!canGroup} onClick={() => { setTitle(group.title); setEditing(true); }} className={cn("min-w-0 flex-1 truncate text-left text-sm font-semibold", !group.title && "text-muted-foreground italic")}>
             {group.title || "Group title…"}
+          </button>
+        )}
+        {canGroup && state.team.ai.groupTitles && !editing && ideas.length > 0 && (
+          <button
+            type="button"
+            disabled={naming}
+            title="Suggest a title with AI"
+            aria-label="Suggest a title with AI"
+            className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-primary"
+            onClick={async () => {
+              setNaming(true);
+              try {
+                const res = await fetch(`/api/ai/meetings/${state.meeting.id}/group-title`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ groupId: group.id }) });
+                const json = await res.json();
+                if (!res.ok) toast.error(json.error ?? "Couldn't suggest a title");
+              } finally {
+                setNaming(false);
+              }
+            }}
+          >
+            {naming ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
           </button>
         )}
         {group.suggested && <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold text-primary uppercase">Suggested</span>}

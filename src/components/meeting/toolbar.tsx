@@ -89,12 +89,12 @@ export function StepToolbar({ onCustomize }: { onCustomize: () => void }) {
             <RotateCcw /> Reset votes
           </Button>
         )}
-        {fac && state.team.aiEnabled && key === "group" && (
+        {fac && state.team.ai.suggestGroups && key === "group" && (
           <Button size="xs" variant="outline" disabled={suggesting} onClick={() => void suggest("groups")}>
             {suggesting ? <Loader2 className="animate-spin" /> : <Sparkles />} Suggest groups
           </Button>
         )}
-        {fac && state.team.aiEnabled && (key === "discuss" || key === "review") && (
+        {fac && state.team.ai.suggestActions && (key === "discuss" || key === "review") && (
           <Button size="xs" variant="outline" disabled={suggesting} onClick={() => void suggest("actions")}>
             {suggesting ? <Loader2 className="animate-spin" /> : <Sparkles />} Suggest actions
           </Button>

@@ -1,4 +1,6 @@
 import "server-only";
+import { createHash } from "node:crypto";
+import { aiFlags, attachmentFlags } from "@/lib/org-features";
 import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { CurrentUser } from "../auth";
@@ -21,6 +23,13 @@ import { getHealthModelFull } from "../health-models";
 import { canFacilitateMeeting, type MeetingContext } from "./context";
 
 export const mediaUrl = (id: string | null | undefined) => (id ? `/api/media/${id}` : null);
+
+/** Uploaded avatar, else (when the org allows it) the user's Gravatar. A blank Gravatar lets initials show through. */
+export function avatarUrl(u: { avatarMediaId: string | null; email: string | null }, gravatar?: boolean) {
+  if (u.avatarMediaId) return mediaUrl(u.avatarMediaId);
+  if (!gravatar || !u.email) return null;
+  return `https://gravatar.com/avatar/${createHash("sha256").update(u.email.trim().toLowerCase()).digest("hex")}?s=128&d=blank`;
+}
 
 const ONLINE_MS = 35_000;
 const TYPING_MS = 6_000;
@@ -51,6 +60,7 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
   const currentKey = steps[meeting.stepIndex]?.key;
   const closed = meeting.status === "closed";
   const anonymity = meeting.anonymity as "names" | "aliases" | "anonymous";
+  const gravatar = !!org.settings?.gravatar;
 
   // ── Participants ────────────────────────────────────────────────────────
   const pRows = await db
@@ -76,7 +86,7 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
       name: displayName(p, u),
       initials: hideIdentity ? (anonymity === "aliases" ? (p.alias ?? "?").split(" ").map((s) => s[0]).join("") : "?") : u.initials ?? "?",
       color: hideIdentity ? p.aliasColor ?? "#94A3B8" : u.color,
-      avatarUrl: hideIdentity ? null : mediaUrl(u.avatarMediaId),
+      avatarUrl: hideIdentity ? null : avatarUrl(u, gravatar),
       role: p.role as ParticipantRole,
       finishedSteps: p.finishedSteps,
       abstained: p.abstained,
@@ -119,7 +129,7 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
   for (const { u } of pRows) if (!memberMap.has(u.id)) memberMap.set(u.id, u);
   const members = [...memberMap.values()]
     .filter((u) => !u.isGuest)
-    .map((u) => ({ userId: u.id, name: u.name, color: u.color, avatarUrl: mediaUrl(u.avatarMediaId) }))
+    .map((u) => ({ userId: u.id, name: u.name, color: u.color, avatarUrl: avatarUrl(u, gravatar) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // ── Reactions (all targets in this meeting) ─────────────────────────────
@@ -584,6 +594,8 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
       orgSlug: org.slug,
       logoUrl: mediaUrl(team.logoMediaId),
       aiEnabled: org.settings?.aiEnabled !== false && !!process.env.ANTHROPIC_API_KEY,
+      ai: aiFlags(org.settings, !!process.env.ANTHROPIC_API_KEY),
+      attachments: attachmentFlags(org.settings),
     },
     me,
     participants,
@@ -639,7 +651,7 @@ export function toActionDTO(
     assignees: a.assigneeIds
       .map((id) => memberMap.get(id))
       .filter(Boolean)
-      .map((u) => ({ id: u!.id, name: u!.name, color: u!.color, avatarUrl: mediaUrl(u!.avatarMediaId) })),
+      .map((u) => ({ id: u!.id, name: u!.name, color: u!.color, avatarUrl: avatarUrl(u!) })),
     dueDate: a.dueDate,
     priority: a.priority,
     sourceType: a.sourceType,

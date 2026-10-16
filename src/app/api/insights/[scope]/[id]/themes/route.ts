@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/server/auth";
 import { getOrgAccess, getTeamAccess, HttpError } from "@/server/access";
 import { listOrgTeams } from "@/server/orgs";
 import { analyzeIdeas } from "@/server/ai-features";
-import { aiEnabledFor } from "@/server/ai";
+import { assertAiFeature } from "@/server/ai";
 import { jsonError, unauthorized } from "@/server/http";
 
 export const maxDuration = 120;
@@ -28,7 +28,7 @@ export async function POST(_req: NextRequest, ctx: RouteContext<"/api/insights/[
       org = a.org;
       teamIds = (await listOrgTeams(a.org.id, true)).map((t) => t.id);
     }
-    if (!aiEnabledFor(org)) throw new HttpError(503, "AI is turned off");
+    assertAiFeature(org, "insights");
     const meetings = teamIds.length
       ? await db.select({ id: schema.meetings.id }).from(schema.meetings).where(and(inArray(schema.meetings.teamId, teamIds), isNull(schema.meetings.deletedAt), eq(schema.meetings.isDemo, false), eq(schema.meetings.type, "retrospective"))).orderBy(desc(schema.meetings.date)).limit(30)
       : [];

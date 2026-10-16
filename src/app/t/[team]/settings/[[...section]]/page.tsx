@@ -7,7 +7,7 @@ import { getTeamAccess, isOrgAdmin } from "@/server/access";
 import { teamDecks, teamTemplates } from "@/server/queries";
 import { listHealthModels } from "@/server/health-models";
 import { mediaUrl } from "@/server/meetings/state";
-import { aiEnabledFor } from "@/server/ai";
+import { aiFeature } from "@/server/ai";
 import { integrationDef } from "@/lib/integrations";
 import { cn } from "@/lib/utils";
 import { ApiKeysSection, DecksSection, DeletedSection, GeneralSection, HealthModelsSection, IntegrationsSection, RolesSection, TemplatesSection } from "@/components/settings/sections";
@@ -35,7 +35,6 @@ export default async function TeamSettingsPage({ params }: PageProps<"/t/[team]/
   if (!access.isAdmin) redirect(`/t/${teamId}`);
   const { team, org } = access;
   const orgAdmin = isOrgAdmin(access.orgUser);
-  const ai = aiEnabledFor(org);
   const base = `/t/${teamId}/settings`;
 
   let content: React.ReactNode = null;
@@ -60,7 +59,7 @@ export default async function TeamSettingsPage({ params }: PageProps<"/t/[team]/
           team={rows.filter((t) => t.teamId === teamId).map(map)}
           account={rows.filter((t) => !t.teamId).map(map)}
           latestLink={`/t/${teamId}/latest/${type}`}
-          aiEnabled={ai}
+          aiEnabled={aiFeature(org, "generateTemplates")}
           isOrgAdmin={orgAdmin}
         />
       );
@@ -75,7 +74,7 @@ export default async function TeamSettingsPage({ params }: PageProps<"/t/[team]/
           models={models.map((m) => ({ id: m.id, name: m.name, style: m.style, teamId: m.teamId, orgId: m.orgId, archivedAt: m.archivedAt, dimensionNames: m.dimensionNames, builtinKey: m.builtinKey }))}
           defaultModelId={team.defaultHealthModelId}
           latestLink={`/t/${teamId}/latest/healthCheck`}
-          aiEnabled={ai}
+          aiEnabled={aiFeature(org, "generateHealthModels")}
           isOrgAdmin={orgAdmin}
         />
       );

@@ -10,6 +10,8 @@ import { addTeamMember, ensureOrgUser } from "@/server/orgs";
 import { escapeHtml, layout, sendMail } from "@/server/email";
 import { logActivity } from "@/server/activity";
 import type { NotificationPreferences, OrgSettings, TeamRole } from "@/lib/types";
+import { ipAllowed, isValidRange } from "@/lib/ip";
+import { currentIp } from "@/server/ip";
 
 export type ActionResult<T = unknown> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -47,6 +49,19 @@ export async function updateOrgAction(orgId: string, patch: { name?: string; col
     if (patch.settings) {
       const s = { ...access.org.settings, ...patch.settings };
       if (s.allowedDomains) s.allowedDomains = [...new Set(s.allowedDomains.map((d) => d.trim().toLowerCase().replace(/^@/, "")).filter(Boolean))];
+      if (patch.settings.allowedIpRanges) {
+        const ranges = [...new Set(patch.settings.allowedIpRanges.map((r) => r.trim()).filter(Boolean))];
+        const bad = ranges.filter((r) => !isValidRange(r));
+        if (bad.length) throw new HttpError(400, `Not a valid address or CIDR range: ${bad.join(", ")}`);
+        const ip = await currentIp();
+        if (ranges.length && ip && !ipAllowed(ip, ranges)) throw new HttpError(400, `Your current address (${ip}) isn't in these ranges, so saving would lock you out`);
+        s.allowedIpRanges = ranges;
+      }
+      if (patch.settings.sso?.enabled) {
+        const sso = patch.settings.sso;
+        if (!sso.entryPoint?.startsWith("https://") && !sso.entryPoint?.startsWith("http://")) throw new HttpError(400, "Enter your identity provider's SSO URL");
+        if (!sso.idpCert?.trim()) throw new HttpError(400, "Paste your identity provider's signing certificate");
+      }
       set.settings = s;
     }
     await db.update(schema.organizations).set(set).where(eq(schema.organizations.id, orgId));
@@ -234,4 +249,16 @@ export async function deleteAccountAction(confirmEmail: string) {
   await db.delete(schema.oauthAccounts).where(eq(schema.oauthAccounts.userId, user.id));
   await db.update(schema.users).set({ email: null, name: "Deleted user", passwordHash: null, avatarMediaId: null, options: { deletedAt: new Date().toISOString() } }).where(eq(schema.users.id, user.id));
   redirect("/login");
+}
+
+export async function revokeConnectedApp(orgId: string, grantId: string) {
+  return wrap(async () => {
+    const user = await requireUser();
+    const access = await getOrgAccess(user, orgId);
+    if (!access) throw new HttpError(403, "Not a member of this organization");
+    const [g] = await db.select().from(schema.oauthGrants).where(and(eq(schema.oauthGrants.id, grantId), eq(schema.oauthGrants.orgId, orgId))).limit(1);
+    if (!g) throw new HttpError(404, "Connection not found");
+    if (g.userId !== user.id && !access.isAdmin) throw new HttpError(403, "Only admins can disconnect other people's apps");
+    await db.update(schema.oauthGrants).set({ revokedAt: new Date() }).where(eq(schema.oauthGrants.id, grantId));
+  });
 }

@@ -14,7 +14,7 @@ export default async function OrgUsersPage({ params }: PageProps<"/o/[org]/users
   const access = await getOrgAccess(user, slug);
   if (!access) notFound();
   if (!access.isAdmin) redirect(`/o/${slug}`);
-  const [users, teams, requests] = await Promise.all([orgUsers(access.org.id), listOrgTeams(access.org.id), pendingRequests(access.org.id)]);
+  const [users, teams, requests] = await Promise.all([orgUsers(access.org.id, !!access.org.settings.gravatar), listOrgTeams(access.org.id), pendingRequests(access.org.id)]);
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8">
       <div>
