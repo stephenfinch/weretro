@@ -30,7 +30,7 @@ export async function POST(_req: NextRequest, ctx: RouteContext<"/api/insights/[
     }
     if (!aiEnabledFor(org)) throw new HttpError(503, "AI is turned off");
     const meetings = teamIds.length
-      ? await db.select({ id: schema.meetings.id }).from(schema.meetings).where(and(inArray(schema.meetings.teamId, teamIds), isNull(schema.meetings.deletedAt), eq(schema.meetings.type, "retrospective"))).orderBy(desc(schema.meetings.date)).limit(30)
+      ? await db.select({ id: schema.meetings.id }).from(schema.meetings).where(and(inArray(schema.meetings.teamId, teamIds), isNull(schema.meetings.deletedAt), eq(schema.meetings.isDemo, false), eq(schema.meetings.type, "retrospective"))).orderBy(desc(schema.meetings.date)).limit(30)
       : [];
     const ideas = meetings.length ? await db.select({ id: schema.ideas.id, text: schema.ideas.text }).from(schema.ideas).where(inArray(schema.ideas.meetingId, meetings.map((m) => m.id))) : [];
     const r = await analyzeIdeas(ideas);

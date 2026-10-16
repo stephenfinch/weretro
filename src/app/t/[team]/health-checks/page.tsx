@@ -18,11 +18,11 @@ export default async function HealthChecksPage({ params, searchParams }: PagePro
   const used = await db
     .selectDistinct({ id: schema.meetings.healthModelId })
     .from(schema.meetings)
-    .where(and(eq(schema.meetings.teamId, team), eq(schema.meetings.type, "healthCheck"), isNull(schema.meetings.deletedAt), isNotNull(schema.meetings.healthModelId)));
+    .where(and(eq(schema.meetings.teamId, team), eq(schema.meetings.type, "healthCheck"), eq(schema.meetings.isDemo, false), isNull(schema.meetings.deletedAt), isNotNull(schema.meetings.healthModelId)));
   const latest = await db
     .select({ id: schema.meetings.healthModelId })
     .from(schema.meetings)
-    .where(and(eq(schema.meetings.teamId, team), eq(schema.meetings.type, "healthCheck"), isNull(schema.meetings.deletedAt)))
+    .where(and(eq(schema.meetings.teamId, team), eq(schema.meetings.type, "healthCheck"), eq(schema.meetings.isDemo, false), isNull(schema.meetings.deletedAt)))
     .orderBy(desc(schema.meetings.createdAt))
     .limit(1);
   const modelId = (typeof sp.model === "string" ? sp.model : null) ?? access.team.defaultHealthModelId ?? latest[0]?.id ?? null;

@@ -341,6 +341,7 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
             eq(schema.meetings.type, "healthCheck"),
             eq(schema.meetings.healthModelId, model.id),
             isNull(schema.meetings.deletedAt),
+            eq(schema.meetings.isDemo, false),
             lt(schema.meetings.createdAt, meeting.createdAt),
           ),
         )

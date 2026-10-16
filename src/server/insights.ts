@@ -8,7 +8,7 @@ export async function healthHistoryRows(teamId: string, modelId: string | null) 
   const meetings = await db
     .select()
     .from(schema.meetings)
-    .where(and(eq(schema.meetings.teamId, teamId), eq(schema.meetings.healthModelId, modelId), isNull(schema.meetings.deletedAt)))
+    .where(and(eq(schema.meetings.teamId, teamId), eq(schema.meetings.healthModelId, modelId), isNull(schema.meetings.deletedAt), eq(schema.meetings.isDemo, false)))
     .orderBy(asc(schema.meetings.date));
   if (!meetings.length) return rows;
   const dims = await db.select().from(schema.healthDimensions).where(eq(schema.healthDimensions.modelId, modelId));
@@ -26,7 +26,7 @@ export async function healthHistory(teamIds: string[], modelId: string) {
   const meetings = await db
     .select()
     .from(schema.meetings)
-    .where(and(inArray(schema.meetings.teamId, teamIds), eq(schema.meetings.healthModelId, modelId), isNull(schema.meetings.deletedAt)))
+    .where(and(inArray(schema.meetings.teamId, teamIds), eq(schema.meetings.healthModelId, modelId), isNull(schema.meetings.deletedAt), eq(schema.meetings.isDemo, false)))
     .orderBy(asc(schema.meetings.date));
   const dims = await db.select().from(schema.healthDimensions).where(and(eq(schema.healthDimensions.modelId, modelId), isNull(schema.healthDimensions.deletedAt))).orderBy(asc(schema.healthDimensions.position));
   const ratings = meetings.length ? await db.select().from(schema.healthRatings).where(inArray(schema.healthRatings.meetingId, meetings.map((m) => m.id))) : [];

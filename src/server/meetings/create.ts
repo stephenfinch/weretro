@@ -81,7 +81,7 @@ export function todayIn(timezone?: string) {
 }
 
 export async function createMeeting(user: CurrentUser, teamId: string, input: CreateMeetingInput): Promise<Meeting> {
-  const access = await assertTeamAccess(user, teamId, START_PERMISSION[input.type]);
+  const access = await assertTeamAccess(user, teamId, input.isDemo ? undefined : START_PERMISSION[input.type]);
   const team = access.team;
   if (team.archivedAt) throw new HttpError(400, "This team is archived");
 
@@ -104,7 +104,7 @@ export async function createMeeting(user: CurrentUser, teamId: string, input: Cr
   if (input.type === "healthCheck" && !input.healthModelId) throw new HttpError(400, "Choose a health model");
 
   let seriesId = input.seriesId ?? null;
-  if (!seriesId && (input.type === "standup" || (input.schedule && input.schedule.recurrence))) {
+  if (!seriesId && !input.isDemo && (input.type === "standup" || (input.schedule && input.schedule.recurrence))) {
     const [series] = await db
       .insert(schema.meetingSeries)
       .values({
@@ -165,7 +165,8 @@ export async function createMeeting(user: CurrentUser, teamId: string, input: Cr
     })
     .returning();
 
-  await addParticipant(meeting, user.id, "facilitator", { facilitating: input.type !== "standup" });
+  await addParticipant(meeting, user.id, "facilitator", { facilitating: input.type !== "standup" || !!input.isDemo });
+  if (input.isDemo) return meeting;
   const memberRows = await db
     .select({ m: schema.members, u: schema.users })
     .from(schema.members)

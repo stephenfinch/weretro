@@ -6,6 +6,7 @@ import { loadMeetingContext } from "@/server/meetings/context";
 import { buildMeetingState } from "@/server/meetings/state";
 import { waitForChange } from "@/server/realtime";
 import { jsonError, unauthorized } from "@/server/http";
+import { demoTick } from "@/server/demo";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -23,8 +24,13 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/meetings/[id
         await db.update(schema.participants).set({ lastSeenAt: new Date() }).where(eq(schema.participants.id, mctx.participant.id));
       }
     }
+    if (mctx.meeting.isDemo) {
+      await demoTick(mctx);
+      mctx = await loadMeetingContext(id, user);
+    }
     if (since >= 0 && since === mctx.meeting.version) {
-      const v = await waitForChange(id, since, 25_000, req.signal);
+      // demo meetings return quickly so the robots get another turn on the next poll
+      const v = await waitForChange(id, since, mctx.meeting.isDemo ? 3_000 : 25_000, req.signal);
       if (v === since) return NextResponse.json({ unchanged: true, version: since, serverNow: new Date().toISOString() });
       mctx = await loadMeetingContext(id, user);
     }

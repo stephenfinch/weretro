@@ -90,6 +90,11 @@ export function MeetingRoom({ initial, integrations, schedule, screen }: { initi
     <MeetingContext value={ctx}>
       <div className="flex h-dvh flex-col overflow-hidden bg-canvas">
         {!screen && <MeetingTopBar onCustomize={() => setCustomize(true)} />}
+        {state.meeting.isDemo && !screen && (
+          <div className="no-print bg-violet-500/10 px-4 py-1.5 text-center text-xs text-violet-700 dark:text-violet-300">
+            Demo meeting · Robot teammates join in as you move through the steps. Demos aren&apos;t added to your team&apos;s history.
+          </div>
+        )}
         {!screen && <StepToolbar onCustomize={() => setCustomize(true)} />}
         <div className="flex min-h-0 flex-1">
           <main className="relative min-w-0 flex-1">
