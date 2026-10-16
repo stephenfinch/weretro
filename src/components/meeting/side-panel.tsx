@@ -49,14 +49,9 @@ export type PanelKey = "team" | "context" | "actions" | "agreements" | "kudos" |
 export function SidePanel({ panel, setPanel, onOpenWhiteboard }: { panel: PanelKey | null; setPanel: (p: PanelKey | null) => void; onOpenWhiteboard: (id: string) => void }) {
   const { state } = useMeeting();
   const chatCount = state.chat.length;
-  const seenChat = useRef(chatCount);
-  const [unread, setUnread] = useState(0);
-  useEffect(() => {
-    if (panel === "chat") {
-      seenChat.current = chatCount;
-      setUnread(0);
-    } else setUnread(Math.max(0, chatCount - seenChat.current));
-  }, [chatCount, panel]);
+  const [seenChat, setSeenChat] = useState(chatCount);
+  if (panel === "chat" && seenChat !== chatCount) setSeenChat(chatCount);
+  const unread = panel === "chat" ? 0 : Math.max(0, chatCount - seenChat);
   const actionCount = state.actions.filter((a) => a.kind === "action" && a.status === "accepted").length;
   const isStandup = state.meeting.type === "standup";
   const rail: { key: PanelKey; icon: typeof Users; label: string; badge?: number; hidden?: boolean }[] = [

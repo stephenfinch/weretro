@@ -10,6 +10,12 @@ import { ALL_QUESTIONS, EMOJI_PUZZLES, MISSION_PROMPTS, PUNCHLINE_SETUPS, QUIZ, 
 import { type Game, PlayerChip, Scoreboard, Stage, TextSubmit, Waiting, norm, pickIndexes, shuffle, useGame } from "./common";
 
 // ── 1. Random name picker ────────────────────────────────────────────────
+function spinWheel(names: string[], angle: number, seg: number) {
+  const i = Math.floor(Math.random() * names.length);
+  const target = 360 * 6 + (360 - (i * seg + seg / 2));
+  return { angle: angle - (angle % 360) + target, winner: names[i], spinAt: Date.now() };
+}
+
 export function NamePicker() {
   const g = useGame();
   const extra = (g.data.extra as string[]) ?? [];
@@ -24,11 +30,7 @@ export function NamePicker() {
     return () => clearTimeout(t);
   }, [winner, g.data.spinAt]);
   const seg = 360 / Math.max(1, names.length);
-  const spin = () => {
-    const i = Math.floor(Math.random() * names.length);
-    const target = 360 * 6 + (360 - (i * seg + seg / 2));
-    void g.setData({ angle: angle - (angle % 360) + target, winner: names[i], spinAt: Date.now() });
-  };
+  const spin = () => void g.setData(spinWheel(names, angle, seg));
   return (
     <Stage title="Random name picker" subtitle="Spin the wheel and let fate decide who's next.">
       <div className="relative mx-auto aspect-square w-full max-w-sm">

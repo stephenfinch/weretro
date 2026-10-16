@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Hand, Rewind, FastForward, ThumbsUp, ThumbsDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { REACTION_EMOJIS } from "@/lib/constants";
@@ -74,17 +74,11 @@ export function LiveFeedbackBar() {
 /** Emoji that float up the screen when anyone reacts live. */
 export function FloatingReactions() {
   const { state } = useMeeting();
-  const [shown, setShown] = useState<{ id: string; emoji: string; left: number }[]>([]);
-  const seen = useMemo(() => new Set<string>(), []);
-  useEffect(() => {
-    const fresh = state.liveEvents.filter((e) => e.kind === "reaction" && e.emoji && !seen.has(e.id) && Date.now() - new Date(e.createdAt).getTime() < 8000);
-    if (!fresh.length) return;
-    fresh.forEach((e) => seen.add(e.id));
-    setShown((s) => [...s, ...fresh.map((e) => ({ id: e.id, emoji: e.emoji!, left: 10 + Math.random() * 80 }))]);
-    const ids = fresh.map((f) => f.id);
-    const t = setTimeout(() => setShown((s) => s.filter((x) => !ids.includes(x.id))), 3500);
-    return () => clearTimeout(t);
-  }, [state.liveEvents, seen]);
+  const now = useNow(500);
+  // Each reaction floats for a few seconds after it arrives; its lane comes from its id so it stays put across renders.
+  const shown = state.liveEvents
+    .filter((e) => e.kind === "reaction" && e.emoji && now - new Date(e.createdAt).getTime() < 4000)
+    .map((e) => ({ id: e.id, emoji: e.emoji!, left: 10 + (hash(e.id) % 80) }));
   const hands = state.liveEvents.filter((e) => e.kind === "hand" && e.active);
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
@@ -104,4 +98,19 @@ export function FloatingReactions() {
       )}
     </div>
   );
+}
+
+function hash(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function useNow(intervalMs: number) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(t);
+  }, [intervalMs]);
+  return now;
 }

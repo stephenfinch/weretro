@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, FilePlus2, Loader2, Plus, Sparkles, Trash2, ArrowDown, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
@@ -185,13 +185,10 @@ export function HealthModelEditor({
     setGroups(m.groups.map((g) => ({ id: copy ? undefined : g.id, name: g.name, description: g.description, dimensions: g.dimensions.map((d) => ({ id: copy ? undefined : d.id, name: d.name, description: d.description, minLabel: d.minLabel, maxLabel: d.maxLabel, valueLabels: d.valueLabels })) })));
     setStage("edit");
   };
-  useEffect(() => {
-    if (open && modelId && !loaded) {
-      setLoaded(true);
-      void load(modelId, false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, modelId, loaded]);
+  if (open && modelId && !loaded) {
+    setLoaded(true);
+    void Promise.resolve().then(() => load(modelId, false));
+  }
   const updDim = (gi: number, di: number, patch: Partial<Dim>) => setGroups(groups.map((g, i) => (i === gi ? { ...g, dimensions: g.dimensions.map((d, j) => (j === di ? { ...d, ...patch } : d)) } : g)));
   const n = style === "happiness" ? (range === 3 ? 3 : 5) : style === "favorability" ? 3 : range;
   return (

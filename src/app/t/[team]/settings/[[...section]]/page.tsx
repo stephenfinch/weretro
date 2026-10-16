@@ -12,6 +12,8 @@ import { integrationDef } from "@/lib/integrations";
 import { cn } from "@/lib/utils";
 import { ApiKeysSection, DecksSection, DeletedSection, GeneralSection, HealthModelsSection, IntegrationsSection, RolesSection, TemplatesSection } from "@/components/settings/sections";
 
+const daysAgo = (n: number) => new Date(Date.now() - n * 86400000);
+
 const SECTIONS = [
   ["general", "General"],
   ["retrospectives", "Retrospectives"],
@@ -104,7 +106,7 @@ export default async function TeamSettingsPage({ params }: PageProps<"/t/[team]/
       content = <RolesSection teamId={teamId} permissions={team.options.permissions ?? {}} />;
       break;
     case "deleted": {
-      const cutoff = new Date(Date.now() - 30 * 86400000);
+      const cutoff = daysAgo(30);
       const [meetings, series] = await Promise.all([
         db
           .select({ id: schema.meetings.id, title: schema.meetings.title, type: schema.meetings.type, date: schema.meetings.date, deletedAt: schema.meetings.deletedAt })

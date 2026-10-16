@@ -528,7 +528,7 @@ export async function buildMeetingState(ctx: MeetingContext, viewer: CurrentUser
     kind: e.kind,
     payload:
       e.kind === "statements" && e.participantId !== myP?.id && e.participantId !== revealedTarget
-        ? (({ lie: _lie, ...rest }) => rest)(e.payload as Record<string, unknown>)
+        ? withoutLie(e.payload as Record<string, unknown>)
         : e.payload,
     mine: e.participantId === myP?.id,
     createdAt: e.createdAt.toISOString(),
@@ -660,4 +660,10 @@ export function toActionDTO(
     commentCount: commentCounts.find((c) => c.targetId === a.id)?.n ?? 0,
     mine: a.createdById === viewerId,
   };
+}
+
+function withoutLie(payload: Record<string, unknown>) {
+  const rest = { ...payload };
+  delete rest.lie;
+  return rest;
 }

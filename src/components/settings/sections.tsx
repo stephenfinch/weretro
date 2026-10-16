@@ -488,7 +488,7 @@ export function RolesSection({ teamId, permissions }: { teamId: string; permissi
 
 export function DeletedSection({ teamId, meetings, series }: { teamId: string; meetings: { id: string; title: string; type: string; date: string; deletedAt: Date }[]; series: { id: string; title: string; type: string; deletedAt: Date }[] }) {
   const { run } = useAct();
-  const left = (d: Date) => Math.max(0, 30 - Math.floor((Date.now() - new Date(d).getTime()) / 86400000));
+  const left = daysLeft;
   return (
     <Section title="Recently deleted" description="Restore deleted meetings and series within 30 days. Restoring a series also restores its meetings.">
       <ul className="divide-y text-sm">
@@ -524,4 +524,8 @@ export function NotificationsSection({ items, values, onSave }: { items: { key: 
       <Button disabled={pending} onClick={() => run(() => onSave(v), "Preferences saved")}>Save preferences</Button>
     </Section>
   );
+}
+
+function daysLeft(deletedAt: Date) {
+  return Math.max(0, 30 - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86400000));
 }

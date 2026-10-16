@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+
 import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

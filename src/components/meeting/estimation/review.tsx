@@ -20,7 +20,8 @@ export function EstimationReviewStep() {
   const { state, op } = useMeeting();
   const [sort, setSort] = useState(state.meeting.options.estimationSort ?? "original");
   const [busy, setBusy] = useState(false);
-  const cards = state.meeting.deck?.cards ?? [];
+  const deckCards = state.meeting.deck?.cards;
+  const cards = useMemo(() => deckCards ?? [], [deckCards]);
   const num = (it: EstimationItemDTO) => Number(it.finalEstimate ?? it.average ?? -1);
   const items = useMemo(() => {
     const list = [...state.estimation].sort((a, b) => a.position - b.position);

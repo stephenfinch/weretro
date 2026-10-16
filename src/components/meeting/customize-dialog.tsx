@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -31,10 +31,12 @@ export function CustomizeDialog({ open, onOpenChange, schedule }: { open: boolea
   const [draft, setDraft] = useState<MeetingDraft>(build);
   const [scope, setScope] = useState<"meeting" | "series">("meeting");
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
+  // Reset the draft each time the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) setDraft(build());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }
   const label = MEETING_TYPE_LABEL[m.type];
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

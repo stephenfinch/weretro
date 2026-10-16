@@ -17,7 +17,7 @@ export function CreateTeamDialog({ orgId, canCreate, trigger, program, teams }: 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [color, setColor] = useState(PALETTE[Math.floor(Math.random() * 16)]);
+  const [color, setColor] = useState(randomColor);
   const [emails, setEmails] = useState("");
   const [admins, setAdmins] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -104,4 +104,8 @@ export function CreateTeamDialog({ orgId, canCreate, trigger, program, teams }: 
       </DialogContent>
     </Dialog>
   );
+}
+
+function randomColor() {
+  return PALETTE[Math.floor(Math.random() * Math.min(16, PALETTE.length))];
 }

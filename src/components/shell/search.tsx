@@ -15,6 +15,7 @@ export function SearchButton({ orgId }: { orgId: string }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Result[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const shownResults = q.trim().length < 2 ? null : results;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -26,12 +27,9 @@ export function SearchButton({ orgId }: { orgId: string }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   useEffect(() => {
-    if (q.trim().length < 2) {
-      setResults(null);
-      return;
-    }
-    setLoading(true);
+    if (q.trim().length < 2) return;
     const t = setTimeout(async () => {
+      setLoading(true);
       const res = await fetch(`/api/search?org=${orgId}&q=${encodeURIComponent(q)}`);
       const json = await res.json();
       setResults(json.results ?? []);
@@ -54,11 +52,11 @@ export function SearchButton({ orgId }: { orgId: string }) {
           </DialogHeader>
           <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search ideas, actions, agreements, comments and updates…" className="h-11" />
           <div className="max-h-[60vh] min-h-24 overflow-y-auto">
-            {!results && <p className="py-6 text-center text-sm text-muted-foreground">Type a few characters to search. Only closed meetings are searched.</p>}
+            {!shownResults && <p className="py-6 text-center text-sm text-muted-foreground">Type a few characters to search. Only closed meetings are searched.</p>}
             {loading && <p className="py-2 text-center text-xs text-muted-foreground">Searching…</p>}
-            {results && !results.length && !loading && <p className="py-6 text-center text-sm text-muted-foreground">No matches for “{q}”</p>}
+            {shownResults && !shownResults.length && !loading && <p className="py-6 text-center text-sm text-muted-foreground">No matches for “{q}”</p>}
             <ul className="divide-y">
-              {results?.map((r, i) => (
+              {shownResults?.map((r, i) => (
                 <li key={i}>
                   <Link href={r.href} onClick={() => setOpen(false)} className="flex flex-col gap-1 px-2 py-3 hover:bg-muted rounded-lg">
                     <span className="line-clamp-2 text-sm">{r.text}</span>
