@@ -25,18 +25,24 @@ Built with Next.js 16, React 19, Tailwind CSS 4, Drizzle ORM and Postgres (Neon 
 **Teams and organizations**
 
 - Organizations with owners, admins and insights viewers; teams with admin, member and observer roles; configurable permissions per team.
-- Programs that group several teams, team transparency, allowed email domains and domain capture, guest controls.
+- Programs that group several teams, team transparency, a hidden team list option, allowed email domains and domain capture, allowed IP ranges, guest controls.
+- Organization switches for each AI feature and each attachment type (polls, kudos, images, GIFs, whiteboards), plus optional Gravatar avatars.
+- SAML single sign-on (Okta, Entra ID, OneLogin, Google Workspace…) with an option to require it for everyone except owners.
 - Team home with open meetings, actions, agreements, parking lot, and recently closed meetings.
 - Insights per team, program or organization: health trends, action completion, participation, sentiment and themes.
 - Exports to Markdown, CSV, Excel and a printable PDF report.
-- Email notifications (mentions, kudos, assignments, reminders, summaries) with per-user preferences.
+- Email notifications (mentions, kudos, assignments, reminders, summaries) with account-wide preferences and per-team switches.
+- "Getting started" checklists for new organizations and teams, and demo meetings with robot teammates.
 - Recently deleted meetings and series can be restored for 30 days.
 
 **Integrations and API**
 
 - Publish actions, agreements and summaries to Jira, GitHub, GitLab, Linear, Trello, Asana, ClickUp, Azure DevOps, Shortcut, monday.com, Basecamp, Slack, Microsoft Teams, Notion and Confluence.
 - Outgoing webhooks, Zapier and n8n with HMAC signatures.
-- REST API (`/api/v1`), an MCP server (`/api/mcp`) for AI assistants, and SCIM 2.0 user provisioning (`/api/scim/v2`). See `/docs/api` in a running instance.
+- REST API (`/api/v1`) with team and account API keys.
+- An MCP server (`/api/mcp`) for AI assistants. Clients connect with OAuth 2.1 (dynamic client registration and PKCE) and act as the person who connected them, or use an API key.
+- SCIM 2.0 provisioning (`/api/scim/v2`) for users and groups: groups can grant owner/admin roles and create teams from group-name patterns.
+- See `/docs/api` in a running instance.
 
 **AI (optional, Claude)**
 
